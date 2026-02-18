@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>中国年餐厅薪资管理系统 - 终极安全版</title>
     <style>
-        /* Mantengo tus estilos originales para no alterar el diseño */
+        /* 保持原样，未做任何改动 */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f0f2f5; color: #333; }
         .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 1100px; margin: auto; }
         .header-box { text-align: center; border-bottom: 3px double #b71c1c; margin-bottom: 25px; padding-bottom: 10px; }
@@ -17,6 +17,7 @@
         .btn-backup { background: #fb8c00; color: white; }
         .btn-restore { background: #8e24aa; color: white; }
         .btn-print { background: #1565c0; color: white; }
+        .btn-sync { background: #00796b; color: white; } /* 新增同步按钮样式 */
         .btn-danger { background: #d32f2f; color: white; }
         .row-normal { background-color: #ffffff; }
         .row-empty { background-color: #fff3e0 !important; } 
@@ -79,7 +80,7 @@
         <button class="btn btn-backup" onclick="exportData()">💾 手动备份 / Exportar</button>
         <button class="btn btn-restore" onclick="triggerRestore()">📂 恢复文件 / Importar</button>
         <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(this)">
-        <button class="btn btn-print" onclick="window.print()">🖨️ 打印工资单 / Imprimir</button>
+        <button class="btn btn-sync" onclick="pushSalaryToCloud()">☁️ 同步云端 / Nube</button> <button class="btn btn-print" onclick="window.print()">🖨️ 打印工资单 / Imprimir</button>
         <button class="btn btn-danger" onclick="clearAllData()">⚠️ 清空全部 / Limpiar</button>
     </div>
 
@@ -113,50 +114,47 @@
     const ADMIN_PASSWORD = "123456"; 
     const DB_NAME = 'rest_salary_complete_v6';
     const BACKUP_NAME = 'rest_salary_backup';
+    const FB_SALARY_URL = "https://restaurant-cw-default-rtdb.firebaseio.com/salary_db.json"; // 云端路径
     let isUnlocked = false; 
     let employees = [];
 
-    // --- MEJORA: Sistema de Carga con Auto-Recuperación ---
     function loadData() {
         const mainData = localStorage.getItem(DB_NAME);
         const backupData = localStorage.getItem(BACKUP_NAME);
-
-        if (mainData) {
-            employees = JSON.parse(mainData);
-        } else if (backupData) {
-            // Si el principal falló pero hay backup, recuperar automáticamente
-            if (confirm("⚠️ 检测到主数据丢失，是否从自动备份中恢复？\nSe detectó pérdida de datos, ¿restaurar desde backup automático?")) {
-                employees = JSON.parse(backupData);
-                saveData();
+        if (mainData) { employees = JSON.parse(mainData); } 
+        else if (backupData) {
+            if (confirm("⚠️ 检测到主数据丢失，是否从自动备份中恢复？")) {
+                employees = JSON.parse(backupData); saveData();
             }
-        } else {
-            employees = [];
-        }
+        } else { employees = []; }
     }
 
-    // --- MEJORA: Guardado Atómico y Doble Copia ---
     function saveData() {
         if (!employees) return;
         const dataStr = JSON.stringify(employees);
-        
-        // No guardar si el array está vacío para evitar borrar datos accidentalmente
-        // (A menos que se use la función clearAllData explícitamente)
         localStorage.setItem(DB_NAME, dataStr);
-        
-        // Crear copia de seguridad en otro slot de memoria
-        if (employees.length > 0) {
-            localStorage.setItem(BACKUP_NAME, dataStr);
-        }
+        if (employees.length > 0) { localStorage.setItem(BACKUP_NAME, dataStr); }
+    }
+
+    // --- 新增：云端同步函数 ---
+    function pushSalaryToCloud() {
+        if (!employees || employees.length === 0) { alert("没有数据可以同步"); return; }
+        fetch(FB_SALARY_URL, {
+            method: 'PUT',
+            body: JSON.stringify(employees)
+        })
+        .then(res => { if(res.ok) alert("🚀 工资数据已成功同步到云端！"); else alert("失败:" + res.status); })
+        .catch(err => alert("网络错误: " + err));
     }
 
     function openModal() {
-        if (isUnlocked) { isUnlocked = false; updateLockUI(); alert("已退出管理模式 / Modo Admin Cerrado"); render(); } 
+        if (isUnlocked) { isUnlocked = false; updateLockUI(); alert("已退出管理模式"); render(); } 
         else { document.getElementById('passwordModal').style.display = 'flex'; document.getElementById('adminPassInput').focus(); }
     }
     function closeModal() { document.getElementById('passwordModal').style.display = 'none'; }
     function verifyPassword() {
         if (document.getElementById('adminPassInput').value === ADMIN_PASSWORD) { isUnlocked = true; updateLockUI(); closeModal(); render(); } 
-        else { alert("密码错误 / Incorrecto"); }
+        else { alert("密码错误"); }
     }
     function updateLockUI() {
         const s = document.getElementById('lockStatusDisplay');
@@ -166,13 +164,12 @@
         b.innerHTML = isUnlocked ? "🔒 退出管理 / Salir" : "🔑 管理员解锁 / Desbloquear";
     }
 
-    function checkPermission() { if (!isUnlocked) alert("需要管理员权限 / Requiere Admin"); return isUnlocked; }
+    function checkPermission() { if (!isUnlocked) alert("需要管理员权限"); return isUnlocked; }
 
     function doPunch(empId, dayIdx, field) {
         const emp = employees.find(e => e.id === empId);
         if (!emp.records[dayIdx]) emp.records[dayIdx] = { s:'', e:'', off:false, abs:false, b:0 };
-        if (!isUnlocked && emp.records[dayIdx][field]) { alert("不可修改 / No se puede modificar"); return; }
-        
+        if (!isUnlocked && emp.records[dayIdx][field]) { alert("不可修改"); return; }
         const now = new Date();
         const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
         emp.records[dayIdx][field] = t;
@@ -181,7 +178,7 @@
 
     function addEmployee() {
         if (!checkPermission()) return;
-        const n = prompt("输入员工姓名 / Nombre:");
+        const n = prompt("输入员工姓名:");
         if (n) { employees.push({ id: Date.now(), name: n, startDate: new Date().toISOString().split('T')[0], days: 15, dailyRate: 500, otRate: 60, records: {} }); saveData(); render(); }
     }
 
@@ -195,12 +192,10 @@
         const emp = employees.find(e => e.id === empId);
         if (!emp.records[dayIdx]) emp.records[dayIdx] = { s:'', e:'', off:false, abs:false, b:0 };
         const r = emp.records[dayIdx];
-
         if (!isUnlocked) {
             if (field === 'b') { render(); return; }
-            if (r[field] === true && val === false) { alert("已锁定 / Bloqueado"); render(); return; }
+            if (r[field] === true && val === false) { alert("已锁定"); render(); return; }
         }
-
         if (field === 'off' && val === true) r.abs = false;
         if (field === 'abs' && val === true) r.off = false;
         r[field] = val;
@@ -240,9 +235,9 @@
                 eBonos += parseFloat(rec.b || 0);
 
                 const isOffOrAbs = (rec.off || rec.abs);
-                const checkLock = !isUnlocked && (isOffOrAbs || rec.s !== "" || rec.e !== "");
                 const sPunchLock = !isUnlocked && (rec.s !== "" || isOffOrAbs);
                 const ePunchLock = !isUnlocked && (rec.e !== "" || isOffOrAbs);
+                const checkLock = !isUnlocked && (isOffOrAbs || rec.s !== "" || rec.e !== "");
 
                 rowsHtml += `<tr class="${rowCls}">
                     <td><b>${cur.getMonth()+1}/${cur.getDate()}</b></td>
@@ -258,22 +253,21 @@
 
             const total = eBase + eExtras + eBonos;
             gBase+=eBase; gExtras+=eExtras; gBonos+=eBonos; gAll+=total;
-
             summaryHtml += `<tr><td><b>${emp.name}</b></td><td>${dT}T / ${dL}L / ${dA}A</td><td>C$ ${eBase.toFixed(2)}</td><td>C$ ${eExtras.toFixed(2)}</td><td>C$ ${eBonos.toFixed(2)}</td><td style="font-weight:bold;">C$ ${total.toFixed(2)}</td></tr>`;
 
             list.innerHTML += `<div class="page-break">
                 <h3 style="color:#1565c0; border-bottom:2px solid #1565c0; margin-top:20px;">${emp.name} - 工资明细 / Recibo de Pago</h3>
                 <div class="individual-config no-print">
-                    <div class="config-item"><label>开始日期 / Inicio:</label><input type="date" value="${emp.startDate}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'startDate',this.value)"></div>
-                    <div class="config-item"><label>结算天数 / Días:</label><input type="number" value="${emp.days}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'days',this.value)"></div>
-                    <div class="config-item"><label>日薪 / Salario Diario:</label><input type="number" value="${emp.dailyRate}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'dailyRate',this.value)"></div>
-                    <div class="config-item"><label>加班时薪 / Hora Extra:</label><input type="number" value="${emp.otRate}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'otRate',this.value)"></div>
-                    <button class="btn btn-danger" onclick="removeEmployee(${emp.id})" style="height:30px; margin-top:15px; display:${isUnlocked?'block':'none'}">删除员工 / Borrar</button>
+                    <div class="config-item"><label>开始日期:</label><input type="date" value="${emp.startDate}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'startDate',this.value)"></div>
+                    <div class="config-item"><label>结算天数:</label><input type="number" value="${emp.days}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'days',this.value)"></div>
+                    <div class="config-item"><label>日薪:</label><input type="number" value="${emp.dailyRate}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'dailyRate',this.value)"></div>
+                    <div class="config-item"><label>加班时薪:</label><input type="number" value="${emp.otRate}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'otRate',this.value)"></div>
+                    <button class="btn btn-danger" onclick="removeEmployee(${emp.id})" style="height:30px; margin-top:15px; display:${isUnlocked?'block':'none'}">删除员工</button>
                 </div>
                 <table><thead><tr>
-                    <th style="width:10%">日期/Fecha</th><th style="width:8%">休/Libre</th><th style="width:8%">缺/Ausen</th>
-                    <th style="width:18%">入/Entrada</th><th style="width:18%">出/Salida</th><th style="width:8%">工时/H</th>
-                    <th style="width:8%">加班/Ex</th><th style="width:10%">福利/Bono</th><th style="width:12%">小计/Sub</th>
+                    <th style="width:10%">日期</th><th style="width:8%">休</th><th style="width:8%">缺</th>
+                    <th style="width:18%">入</th><th style="width:18%">出</th><th style="width:8%">工时</th>
+                    <th style="width:8%">加班</th><th style="width:10%">福利</th><th style="width:12%">小计</th>
                 </tr></thead>
                 <tbody>${rowsHtml}</tbody></table>
                 <div class="emp-stat-box">
@@ -293,22 +287,16 @@
     function removeEmployee(id) { if (checkPermission() && confirm("确定删除？")) { employees = employees.filter(e => e.id !== id); saveData(); render(); } }
     
     function clearAllData() { 
-        if (checkPermission() && confirm("⚠️ 确定清空所有数据？这将同时清除备份！")) { 
-            employees = []; 
-            localStorage.removeItem(DB_NAME);
-            localStorage.removeItem(BACKUP_NAME);
-            render(); 
+        if (checkPermission() && confirm("⚠️ 确定清空所有数据？")) { 
+            employees = []; localStorage.removeItem(DB_NAME); localStorage.removeItem(BACKUP_NAME); render(); 
         } 
     }
 
     function exportData() {
-        if (employees.length === 0) { alert("没有数据可以备份 / No hay datos"); return; }
-        const d = JSON.stringify(employees);
-        const b = new Blob([d], {type: "application/json"});
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(b);
-        a.download = `Nomina_ChinaYearly_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
+        if (employees.length === 0) return;
+        const b = new Blob([JSON.stringify(employees)], {type: "application/json"});
+        const a = document.createElement("a"); a.href = URL.createObjectURL(b);
+        a.download = `Nomina_ChinaYearly_BACKUP_${new Date().toISOString().split('T')[0]}.json`; a.click();
     }
 
     function triggerRestore() { if(checkPermission()) document.getElementById('importFile').click(); }
@@ -318,25 +306,13 @@
         r.onload = (e) => { 
             try { 
                 const temp = JSON.parse(e.target.result); 
-                if (Array.isArray(temp)) {
-                    employees = temp;
-                    saveData(); 
-                    render(); 
-                    alert("恢复成功 / Restaurado"); 
-                } else {
-                    throw new Error();
-                }
-            } catch(err) { 
-                alert("文件格式不正确 / Formato de archivo inválido"); 
-            } 
+                if (Array.isArray(temp)) { employees = temp; saveData(); render(); alert("恢复成功"); } 
+            } catch(err) { alert("格式错误"); } 
         };
         r.readAsText(i.files[0]);
     }
 
-    window.onload = () => {
-        loadData();
-        render();
-    };
+    window.onload = () => { loadData(); render(); };
 </script>
 </body>
 </html>
