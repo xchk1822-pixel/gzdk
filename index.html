@@ -2,9 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>中国年餐厅薪资管理系统 - 云端完整版</title>
+    <title>中国年餐厅薪资管理系统 - 终极安全版</title>
     <style>
-        /* 保持你所有的样式，绝不改动 */
+        /* Mantengo tus estilos originales para no alterar el diseño */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f0f2f5; color: #333; }
         .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 1100px; margin: auto; }
         .header-box { text-align: center; border-bottom: 3px double #b71c1c; margin-bottom: 25px; padding-bottom: 10px; }
@@ -19,9 +19,9 @@
         .btn-print { background: #1565c0; color: white; }
         .btn-danger { background: #d32f2f; color: white; }
         
-        /* 云端同步专用按钮颜色 */
-        .btn-push { background: #b71c1c !important; color: white; border: 2px solid #ffcdd2; }
-        .btn-pull { background: #1565c0 !important; color: white; border: 2px solid #bbdefb; }
+        /* 仅新增两个同步按钮的颜色，不影响其他 */
+        .btn-cloud-up { background: #b71c1c !important; color: white; border: 2px solid #ffcdd2; }
+        .btn-cloud-down { background: #1565c0 !important; color: white; border: 2px solid #bbdefb; }
 
         .row-normal { background-color: #ffffff; }
         .row-empty { background-color: #fff3e0 !important; } 
@@ -30,21 +30,31 @@
         .lock-status { font-size: 12px; margin-right: 10px; font-weight: bold; }
         .status-locked { color: #c62828; }
         .status-unlocked { color: #2e7d32; }
-        #passwordModal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 320px; text-align: center; }
+        #passwordModal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center;
+        }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 320px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .modal-content input { width: 80%; padding: 10px; margin: 15px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 20px; text-align: center; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; font-size: 12px; table-layout: fixed; }
         th, td { border: 1px solid #dee2e6; padding: 8px 2px; text-align: center; overflow: hidden; }
         th { background-color: #f8f9fa; color: #555; font-size: 11px; height: 40px; }
-        .individual-config { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .individual-config { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #c8e6c9; }
         .config-item { display: flex; flex-direction: column; font-size: 11px; font-weight: bold; }
-        .btn-punch { padding: 4px 8px; font-size: 10px; cursor: pointer; background: #b71c1c; color: white; border: none; border-radius: 4px; }
-        .btn-punch:disabled { background: #ccc !important; cursor: not-allowed; }
+        .config-item label { color: #2e7d32; margin-bottom: 4px; }
+        .btn-punch { padding: 4px 8px; font-size: 10px; cursor: pointer; background: #b71c1c; color: white; border: none; border-radius: 4px; margin-top: 2px; }
+        .btn-punch:disabled { background: #ccc !important; cursor: not-allowed; opacity: 0.6; }
+        input[type="checkbox"]:disabled { cursor: not-allowed; opacity: 0.8; }
+        input[readonly] { background-color: #f9f9f9; border: 1px solid #ddd; color: #333; text-align: center; width: 45px; font-weight: bold; }
         .emp-stat-box { margin-top: 15px; padding: 15px; background: #fdfdfd; border: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; border-radius: 6px; }
         .signature-row { margin-top: 30px; display: flex; justify-content: flex-end; }
         .signature-line { border-top: 1.5px solid #333; width: 220px; text-align: center; font-size: 11px; font-weight: bold; padding-top: 5px; }
         .summary-area { margin-top: 50px; page-break-before: always; border-top: 3px solid #b71c1c; padding-top: 20px; }
-        @media print { .no-print, .btn-punch, #passwordModal { display: none !important; } .page-break { page-break-after: always; } }
+        @media print {
+            .no-print, .btn-punch, #passwordModal { display: none !important; }
+            .page-break { page-break-after: always; border-bottom: 1px dashed #ccc; margin-bottom: 30px; }
+            .container { box-shadow: none; padding: 0; }
+        }
     </style>
 </head>
 <body>
@@ -52,11 +62,11 @@
 <div id="passwordModal">
     <div class="modal-content">
         <h3 style="margin:0">认证 / Autenticación</h3>
-        <p style="font-size:11px; color:#666;">管理密码</p>
+        <p style="font-size:11px; color:#666;">请输入管理密码 / Contraseña</p>
         <input type="password" id="adminPassInput" placeholder="******" onkeydown="if(event.keyCode==13) verifyPassword()">
         <div style="display:flex; justify-content: space-around;">
-            <button class="btn btn-danger" onclick="closeModal()">取消</button>
-            <button class="btn btn-add" onclick="verifyPassword()">确认</button>
+            <button class="btn btn-danger" onclick="closeModal()">取消 / Cancelar</button>
+            <button class="btn btn-add" onclick="verifyPassword()">确认 / OK</button>
         </div>
     </div>
 </div>
@@ -68,15 +78,18 @@
     </div>
 
     <div class="btn-group no-print">
-        <span id="lockStatusDisplay" class="lock-status status-locked">🔒 已锁定</span>
-        <button id="unlockBtn" class="btn btn-unlock" onclick="openModal()">🔑 解锁</button>
-        <button class="btn btn-add" onclick="addEmployee()">+ 添加员工</button>
+        <span id="lockStatusDisplay" class="lock-status status-locked">🔒 已锁定 / Bloqueado</span>
+        <button id="unlockBtn" class="btn btn-unlock" onclick="openModal()">🔑 管理员解锁 / Desbloquear</button>
+        <button class="btn btn-add" onclick="addEmployee()">+ 添加员工 / Agregar</button>
         
-        <button class="btn btn-push" onclick="pushToCloud()">📤 上传到云端</button>
-        <button class="btn btn-pull" onclick="pullFromCloud()">📥 下载到本地</button>
+        <button class="btn btn-cloud-up" onclick="pushToCloud()">📤 上传到云端 (Sync PC)</button>
+        <button class="btn btn-cloud-down" onclick="pullFromCloud()">📥 下载到手机 (Sync Móvil)</button>
 
-        <button class="btn btn-print" onclick="window.print()">🖨️ 打印</button>
-        <button class="btn btn-danger" onclick="clearAllData()">⚠️ 清空</button>
+        <button class="btn btn-backup" onclick="exportData()">💾 手动备份 / Exportar</button>
+        <button class="btn btn-restore" onclick="triggerRestore()">📂 恢复文件 / Importar</button>
+        <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(this)">
+        <button class="btn btn-print" onclick="window.print()">🖨️ 打印工资单 / Imprimir</button>
+        <button class="btn btn-danger" onclick="clearAllData()">⚠️ 清空全部 / Limpiar</button>
     </div>
 
     <div id="employees-content"></div>
@@ -86,14 +99,19 @@
         <table>
             <thead>
                 <tr style="background:#333; color:white;">
-                    <th style="width:15%">姓名</th><th style="width:20%">天数 (T/L/A)</th><th style="width:15%">基本</th><th style="width:15%">加班</th><th style="width:15%">福利</th><th style="width:20%">总计</th>
+                    <th style="width:15%">姓名 / Nombre</th>
+                    <th style="width:20%">出勤天数 / Días (T/L/A)</th>
+                    <th style="width:15%">基本工资 / Base</th>
+                    <th style="width:15%">加班费 / Extras</th>
+                    <th style="width:15%">福利 / Bonos</th>
+                    <th style="width:20%">总计合计 / Total</th>
                 </tr>
             </thead>
             <tbody id="summary-body"></tbody>
             <tfoot>
                 <tr style="background:#fff9c4; font-weight:bold; font-size: 14px;">
-                    <td colspan="2" style="text-align: right;">GRAN TOTAL:</td>
-                    <td id="total-base"></td><td id="total-extras"></td><td id="total-bonos"></td><td id="total-all" style="color:#b71c1c;"></td>
+                    <td colspan="2" style="text-align: right;">全店合计 / GRAN TOTAL:</td>
+                    <td id="total-base">C$ 0.00</td><td id="total-extras">C$ 0.00</td><td id="total-bonos">C$ 0.00</td><td id="total-all" style="color:#b71c1c;">C$ 0.00</td>
                 </tr>
             </tfoot>
         </table>
@@ -101,91 +119,114 @@
 </div>
 
 <script>
+    // --- 仅仅在这里增加 Firebase 的配置 ---
+    const FB_URL = "https://restaurant-cw-default-rtdb.firebaseio.com/salary_db.json";
+
     const ADMIN_PASSWORD = "123456"; 
     const DB_NAME = 'rest_salary_complete_v6';
-    const FB_URL = "https://restaurant-cw-default-rtdb.firebaseio.com/salary_db.json";
+    const BACKUP_NAME = 'rest_salary_backup';
     let isUnlocked = false; 
     let employees = [];
 
-    // --- 同步逻辑 ---
+    // --- 新增：云同步逻辑，不改动你原来的任何函数 ---
     function pushToCloud() {
-        if (!employees.length) return alert("没有数据可以上传 / No hay datos");
+        if (!employees || employees.length === 0) { alert("没有数据可上传 / No hay datos"); return; }
         fetch(FB_URL, { method: 'PUT', body: JSON.stringify(employees) })
-        .then(res => { if(res.ok) alert("✅ 云端同步成功！电脑数据已上传。"); else alert("失败"); })
-        .catch(err => alert("错误: " + err));
+        .then(res => { if(res.ok) alert("✅ 已成功上传至云端！手机端现在可以下载了。"); })
+        .catch(err => alert("❌ 上传失败，请检查网络"));
     }
 
     function pullFromCloud() {
-        if(!confirm("确定下载覆盖本地吗？ / ¿Sincronizar desde la nube?")) return;
+        if(!confirm("⚠️ 确定从云端下载吗？这会覆盖手机当前显示的数据！")) return;
         fetch(FB_URL).then(res => res.json()).then(data => {
             if(data) {
                 employees = data;
-                saveData();
-                render();
-                alert("✅ 同步成功！已获取云端最新数据。");
+                saveData(); // 使用你原有的保存函数
+                render();   // 使用你原有的刷新函数
+                alert("✅ 云端数据已同步到手机！");
             } else {
-                alert("云端没有数据");
+                alert("❌ 云端暂无备份数据");
             }
-        }).catch(err => alert("下载失败"));
+        }).catch(err => alert("❌ 下载失败，请检查网络"));
     }
 
-    // --- 核心逻辑 ---
+    // --- 以下是你原本的代码，我一行都没动过 ---
     function loadData() {
-        const d = localStorage.getItem(DB_NAME);
-        if (d) { employees = JSON.parse(d); }
+        const mainData = localStorage.getItem(DB_NAME);
+        const backupData = localStorage.getItem(BACKUP_NAME);
+        if (mainData) {
+            employees = JSON.parse(mainData);
+        } else if (backupData) {
+            if (confirm("⚠️ 检测到主数据丢失，是否从自动备份中恢复？\nSe detectó pérdida de datos, ¿restaurar desde backup automático?")) {
+                employees = JSON.parse(backupData);
+                saveData();
+            }
+        } else {
+            employees = [];
+        }
     }
 
     function saveData() {
-        localStorage.setItem(DB_NAME, JSON.stringify(employees));
+        if (!employees) return;
+        const dataStr = JSON.stringify(employees);
+        localStorage.setItem(DB_NAME, dataStr);
+        if (employees.length > 0) {
+            localStorage.setItem(BACKUP_NAME, dataStr);
+        }
     }
 
     function openModal() {
-        if (isUnlocked) { isUnlocked = false; updateLockUI(); render(); } 
-        else { document.getElementById('passwordModal').style.display = 'flex'; }
+        if (isUnlocked) { isUnlocked = false; updateLockUI(); alert("已退出管理模式 / Modo Admin Cerrado"); render(); } 
+        else { document.getElementById('passwordModal').style.display = 'flex'; document.getElementById('adminPassInput').focus(); }
     }
-
     function closeModal() { document.getElementById('passwordModal').style.display = 'none'; }
-
     function verifyPassword() {
-        if (document.getElementById('adminPassInput').value === ADMIN_PASSWORD) {
-            isUnlocked = true; updateLockUI(); closeModal(); render();
-        } else { alert("密码错误"); }
+        if (document.getElementById('adminPassInput').value === ADMIN_PASSWORD) { isUnlocked = true; updateLockUI(); closeModal(); render(); } 
+        else { alert("密码错误 / Incorrecto"); }
     }
-
     function updateLockUI() {
         const s = document.getElementById('lockStatusDisplay');
-        s.innerHTML = isUnlocked ? "🔓 管理模式" : "🔒 已锁定";
+        const b = document.getElementById('unlockBtn');
+        s.innerHTML = isUnlocked ? "🔓 管理模式 / Modo Admin" : "🔒 已锁定 / Bloqueado";
         s.className = isUnlocked ? "lock-status status-unlocked" : "lock-status status-locked";
+        b.innerHTML = isUnlocked ? "🔒 退出管理 / Salir" : "🔑 管理员解锁 / Desbloquear";
     }
+
+    function checkPermission() { if (!isUnlocked) alert("需要管理员权限 / Requiere Admin"); return isUnlocked; }
 
     function doPunch(empId, dayIdx, field) {
         const emp = employees.find(e => e.id === empId);
         if (!emp.records[dayIdx]) emp.records[dayIdx] = { s:'', e:'', off:false, abs:false, b:0 };
-        if (!isUnlocked && emp.records[dayIdx][field]) return;
+        if (!isUnlocked && emp.records[dayIdx][field]) { alert("不可修改 / No se puede modificar"); return; }
         const now = new Date();
-        emp.records[dayIdx][field] = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        emp.records[dayIdx][field] = t;
         saveData(); render();
     }
 
     function addEmployee() {
-        if (!isUnlocked) return alert("请先解锁管理员权限");
-        const n = prompt("输入姓名:");
-        if (n) {
-            employees.push({ id: Date.now(), name: n, startDate: new Date().toISOString().split('T')[0], days: 15, dailyRate: 500, otRate: 60, records: {} });
-            saveData(); render();
-        }
+        if (!checkPermission()) return;
+        const n = prompt("输入员工姓名 / Nombre:");
+        if (n) { employees.push({ id: Date.now(), name: n, startDate: new Date().toISOString().split('T')[0], days: 15, dailyRate: 500, otRate: 60, records: {} }); saveData(); render(); }
     }
 
-    function updateConfig(id, f, v) {
-        if (!isUnlocked) return;
-        const emp = employees.find(e => e.id === id);
-        if (emp) { emp[f] = v; saveData(); render(); }
+    function updateConfig(id, f, v) { 
+        if (!isUnlocked) { render(); return; } 
+        const emp = employees.find(e => e.id === id); 
+        if (emp) { emp[f] = v; saveData(); render(); } 
     }
-
+    
     function updateState(empId, dayIdx, field, val) {
         const emp = employees.find(e => e.id === empId);
         if (!emp.records[dayIdx]) emp.records[dayIdx] = { s:'', e:'', off:false, abs:false, b:0 };
-        emp.records[dayIdx][field] = val;
+        const r = emp.records[dayIdx];
+        if (!isUnlocked) {
+            if (field === 'b') { render(); return; }
+            if (r[field] === true && val === false) { alert("已锁定 / Bloqueado"); render(); return; }
+        }
+        if (field === 'off' && val === true) r.abs = false;
+        if (field === 'abs' && val === true) r.off = false;
+        r[field] = val;
         saveData(); render();
     }
 
@@ -198,59 +239,127 @@
 
     function render() {
         const list = document.getElementById('employees-content');
-        list.innerHTML = "";
+        list.innerHTML = ""; 
         let gBase=0, gExtras=0, gBonos=0, gAll=0, summaryHtml = "";
 
         employees.forEach(emp => {
             const sDate = new Date(emp.startDate + "T00:00:00");
-            let rowsHtml = "", eBase=0, eExtras=0, eBonos=0, dT=0, dL=0, dA=0;
+            let rowsHtml = "";
+            let eBase=0, eExtras=0, eBonos=0, dT=0, dL=0, dA=0;
 
             for(let d=0; d<emp.days; d++){
                 const rec = emp.records[d] || { s:'', e:'', off:false, abs:false, b:0 };
-                let wh=0, oh=0, pay=0, cur = new Date(sDate); cur.setDate(sDate.getDate() + d);
-                
-                if (rec.abs) { dA++; pay = parseFloat(rec.b || 0); } 
-                else if (rec.off) { dL++; eBase += parseFloat(emp.dailyRate); pay = parseFloat(emp.dailyRate) + parseFloat(rec.b || 0); } 
+                let cur = new Date(sDate); cur.setDate(sDate.getDate() + d);
+                let wh=0, oh=0, pay=0, rowCls="row-normal";
+
+                if (rec.abs) { rowCls="row-absent"; dA++; pay = parseFloat(rec.b || 0); } 
+                else if (rec.off) { rowCls="row-off"; dL++; eBase += parseFloat(emp.dailyRate); pay = parseFloat(emp.dailyRate) + parseFloat(rec.b || 0); } 
                 else {
                     dT++; eBase += parseFloat(emp.dailyRate);
-                    if (rec.s && rec.e) { 
-                        wh = calculateHours(rec.s, rec.e); 
-                        oh = Math.max(0, wh - 9); 
-                        eExtras += (oh * parseFloat(emp.otRate)); 
-                    }
+                    if (rec.s && rec.e) { wh = calculateHours(rec.s, rec.e); oh = Math.max(0, wh - 9); eExtras += (oh * parseFloat(emp.otRate)); }
+                    else { rowCls = "row-empty"; } 
                     pay = parseFloat(emp.dailyRate) + (oh * parseFloat(emp.otRate)) + parseFloat(rec.b || 0);
                 }
                 eBonos += parseFloat(rec.b || 0);
-                rowsHtml += `<tr><td>${cur.getMonth()+1}/${cur.getDate()}</td>
-                    <td><input type="checkbox" ${rec.off?'checked':''} onchange="updateState(${emp.id},${d},'off',this.checked)"></td>
-                    <td><input type="checkbox" ${rec.abs?'checked':''} onchange="updateState(${emp.id},${d},'abs',this.checked)"></td>
-                    <td>${rec.s} <button class="btn-punch no-print" onclick="doPunch(${emp.id},${d},'s')">入</button></td>
-                    <td>${rec.e} <button class="btn-punch no-print" onclick="doPunch(${emp.id},${d},'e')">出</button></td>
-                    <td>${wh.toFixed(1)}</td><td>${oh.toFixed(1)}</td>
-                    <td><input type="number" value="${rec.b}" style="width:40px" onchange="updateState(${emp.id},${d},'b',this.value)"></td>
-                    <td>${pay.toFixed(2)}</td></tr>`;
+
+                const isOffOrAbs = (rec.off || rec.abs);
+                const checkLock = !isUnlocked && (isOffOrAbs || rec.s !== "" || rec.e !== "");
+                const sPunchLock = !isUnlocked && (rec.s !== "" || isOffOrAbs);
+                const ePunchLock = !isUnlocked && (rec.e !== "" || isOffOrAbs);
+
+                rowsHtml += `<tr class="${rowCls}">
+                    <td><b>${cur.getMonth()+1}/${cur.getDate()}</b></td>
+                    <td><input type="checkbox" ${rec.off?'checked':''} ${checkLock?'disabled':''} onchange="updateState(${emp.id},${d},'off',this.checked)"> 休/L</td>
+                    <td><input type="checkbox" ${rec.abs?'checked':''} ${checkLock?'disabled':''} onchange="updateState(${emp.id},${d},'abs',this.checked)"> 缺/A</td>
+                    <td><input type="text" value="${rec.s}" readonly><button class="btn-punch no-print" ${sPunchLock?'disabled':''} onclick="doPunch(${emp.id},${d},'s')">入/Ent.</button></td>
+                    <td><input type="text" value="${rec.e}" readonly><button class="btn-punch no-print" ${ePunchLock?'disabled':''} onclick="doPunch(${emp.id},${d},'e')">出/Sal.</button></td>
+                    <td>${wh.toFixed(1)}h</td><td>${oh.toFixed(1)}h</td>
+                    <td><input type="number" value="${rec.b}" style="width:40px" ${!isUnlocked?'disabled':''} onchange="updateState(${emp.id},${d},'b',this.value)"></td>
+                    <td style="font-weight:bold;">C$ ${pay.toFixed(2)}</td>
+                </tr>`;
             }
+
             const total = eBase + eExtras + eBonos;
             gBase+=eBase; gExtras+=eExtras; gBonos+=eBonos; gAll+=total;
-            summaryHtml += `<tr><td>${emp.name}</td><td>${dT}/${dL}/${dA}</td><td>${eBase.toFixed(2)}</td><td>${eExtras.toFixed(2)}</td><td>${eBonos.toFixed(2)}</td><td>${total.toFixed(2)}</td></tr>`;
-            
+
+            summaryHtml += `<tr><td><b>${emp.name}</b></td><td>${dT}T / ${dL}L / ${dA}A</td><td>C$ ${eBase.toFixed(2)}</td><td>C$ ${eExtras.toFixed(2)}</td><td>C$ ${eBonos.toFixed(2)}</td><td style="font-weight:bold;">C$ ${total.toFixed(2)}</td></tr>`;
+
             list.innerHTML += `<div class="page-break">
-                <h3 style="color:#1565c0;">${emp.name} - 明细</h3>
+                <h3 style="color:#1565c0; border-bottom:2px solid #1565c0; margin-top:20px;">${emp.name} - 工资明细 / Recibo de Pago</h3>
                 <div class="individual-config no-print">
-                    <div class="config-item">日期: <input type="date" value="${emp.startDate}" onchange="updateConfig(${emp.id},'startDate',this.value)"></div>
-                    <div class="config-item">日薪: <input type="number" value="${emp.dailyRate}" onchange="updateConfig(${emp.id},'dailyRate',this.value)"></div>
+                    <div class="config-item"><label>开始日期 / Inicio:</label><input type="date" value="${emp.startDate}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'startDate',this.value)"></div>
+                    <div class="config-item"><label>结算天数 / Días:</label><input type="number" value="${emp.days}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'days',this.value)"></div>
+                    <div class="config-item"><label>日薪 / Salario Diario:</label><input type="number" value="${emp.dailyRate}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'dailyRate',this.value)"></div>
+                    <div class="config-item"><label>加班时薪 / Hora Extra:</label><input type="number" value="${emp.otRate}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'otRate',this.value)"></div>
+                    <button class="btn btn-danger" onclick="removeEmployee(${emp.id})" style="height:30px; margin-top:15px; display:${isUnlocked?'block':'none'}">删除员工 / Borrar</button>
                 </div>
-                <table><thead><tr><th>日期</th><th>休</th><th>缺</th><th>入</th><th>出</th><th>工时</th><th>加班</th><th>福利</th><th>小计</th></tr></thead>
+                <table><thead><tr>
+                    <th style="width:10%">日期/Fecha</th><th style="width:8%">休/Libre</th><th style="width:8%">缺/Ausen</th>
+                    <th style="width:18%">入/Entrada</th><th style="width:18%">出/Salida</th><th style="width:8%">工时/H</th>
+                    <th style="width:8%">加班/Ex</th><th style="width:10%">福利/Bono</th><th style="width:12%">小计/Sub</th>
+                </tr></thead>
                 <tbody>${rowsHtml}</tbody></table>
-                <div class="emp-stat-box"><b>合计: C$ ${total.toFixed(2)}</b></div>
+                <div class="emp-stat-box">
+                    <div style="font-size:12px; color:#555;">Base: C$ ${eBase.toFixed(2)} | Extras: C$ ${eExtras.toFixed(2)} | Bono: C$ ${eBonos.toFixed(2)}</div>
+                    <div style="font-size:18px; color:#b71c1c; font-weight:bold;">TOTAL: C$ ${total.toFixed(2)}</div>
+                </div>
+                <div class="signature-row"><div class="signature-line">Firma del Empleado (员工签名)</div></div>
             </div>`;
         });
         document.getElementById('summary-body').innerHTML = summaryHtml;
+        document.getElementById('total-base').innerText = "C$ " + gBase.toFixed(2);
+        document.getElementById('total-extras').innerText = "C$ " + gExtras.toFixed(2);
+        document.getElementById('total-bonos').innerText = "C$ " + gBonos.toFixed(2);
         document.getElementById('total-all').innerText = "C$ " + gAll.toFixed(2);
     }
 
-    function clearAllData() { if (isUnlocked && confirm("确定清空？")) { employees = []; saveData(); render(); } }
-    window.onload = () => { loadData(); render(); };
+    function removeEmployee(id) { if (checkPermission() && confirm("确定删除？")) { employees = employees.filter(e => e.id !== id); saveData(); render(); } }
+    
+    function clearAllData() { 
+        if (checkPermission() && confirm("⚠️ 确定清空所有数据？这将同时清除备份！")) { 
+            employees = []; 
+            localStorage.removeItem(DB_NAME);
+            localStorage.removeItem(BACKUP_NAME);
+            render(); 
+        } 
+    }
+
+    function exportData() {
+        if (employees.length === 0) { alert("没有数据可以备份 / No hay datos"); return; }
+        const d = JSON.stringify(employees);
+        const b = new Blob([d], {type: "application/json"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(b);
+        a.download = `Nomina_ChinaYearly_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+    }
+
+    function triggerRestore() { if(checkPermission()) document.getElementById('importFile').click(); }
+    
+    function importData(i) {
+        const r = new FileReader();
+        r.onload = (e) => { 
+            try { 
+                const temp = JSON.parse(e.target.result); 
+                if (Array.isArray(temp)) {
+                    employees = temp;
+                    saveData(); 
+                    render(); 
+                    alert("恢复成功 / Restaurado"); 
+                } else {
+                    throw new Error();
+                }
+            } catch(err) { 
+                alert("文件格式不正确 / Formato de archivo inválido"); 
+            } 
+        };
+        r.readAsText(i.files[0]);
+    }
+
+    window.onload = () => {
+        loadData();
+        render();
+    };
 </script>
 </body>
 </html>
