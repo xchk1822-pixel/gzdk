@@ -510,10 +510,11 @@
                 }
                 eBonos += parseFloat(rec.b || 0);
 
-               // 管理员可以修改任何内容，员工不能修改已打卡的
-const sPunchLock = !isUnlocked && rec.s !== "";  // 员工已打卡则禁用
-const ePunchLock = !isUnlocked && rec.e !== "";  // 员工已打卡则禁用
-const checkLock = !isUnlocked && (rec.off || rec.abs);  // 员工已标记则禁用
+// 如果标记了休或缺，整行锁定（管理员除外）
+const rowLocked = !isUnlocked && (rec.off || rec.abs); // 员工标记休或缺时整行锁定
+const sPunchLock = rowLocked || (!isUnlocked && rec.s !== ""); // 整行锁定或员工已打卡
+const ePunchLock = rowLocked || (!isUnlocked && rec.e !== ""); // 整行锁定或员工已打卡
+const checkLock = !isUnlocked && (rec.off || rec.abs); // 员工已标记则复选框禁用
                 rowsHtml += `<tr class="${rowCls}">
                     <td><b>${cur.getMonth()+1}/${cur.getDate()}</b></td>
                     <td><input type="checkbox" ${rec.off?'checked':''} ${checkLock?'disabled':''} onchange="updateState(${emp.id},${d},'off',this.checked)"> 休/L</td>
@@ -1016,3 +1017,4 @@ function updateTime(empId, dayIdx, field, value) {
 }</script>
 </body>
 </html>
+
