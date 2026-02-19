@@ -301,10 +301,27 @@
     }
 
     function addEmployee() {
-        if (!checkPermission()) return;
-        const n = prompt("输入员工姓名 / Nombre:");
-        if (n) { employees.push({ id: Date.now(), name: n, startDate: new Date().toISOString().split('T')[0], days: 15, dailyRate: 500, otRate: 60, records: {} }); saveData(); render(); }
+    if (!checkPermission()) return;
+    const n = prompt("输入员工姓名 / Nombre:");
+    if (n && n.trim() !== "") { 
+        const newEmp = { 
+            id: Date.now(), 
+            name: n.trim(), 
+            startDate: new Date().toISOString().split('T')[0], 
+            days: 15, 
+            dailyRate: 500, 
+            otRate: 60, 
+            records: {} 
+        };
+        employees.push(newEmp);
+        localStorage.setItem(DB_NAME, JSON.stringify(employees));
+        if (employees.length > 0) {
+            localStorage.setItem(BACKUP_NAME, JSON.stringify(employees));
+        }
+        render();
+        alert("✅ 员工 " + n.trim() + " 添加成功");
     }
+}
 
     function updateConfig(id, f, v) { 
         if (!isUnlocked) { render(); return; } 
@@ -469,3 +486,4 @@
 </script>
 </body>
 </html>
+
