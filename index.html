@@ -396,26 +396,36 @@
     }
 
     // ==================== 添加员工（只有管理员）====================
-    function addEmployee() {
-        if (!isUnlocked) {
-            alert("需要管理员权限 / Requiere Admin");
-            return;
-        }
-        const n = prompt("输入员工姓名 / Nombre:");
-        if (n) { 
-            employees.push({ 
-                id: Date.now(), 
-                name: n, 
-                startDate: new Date().toISOString().split('T')[0], 
-                days: 15, 
-                dailyRate: 500, 
-                otRate: 60, 
-                records: {} 
-            }); 
-            saveData(); 
-            render(); 
-        }
+    // ==================== 添加员工（只有管理员）====================
+function addEmployee() {
+    if (!isUnlocked) {
+        alert("需要管理员权限 / Requiere Admin");
+        return;
     }
+    const n = prompt("输入员工姓名 / Nombre:");
+    if (n) { 
+        // 创建一个新员工对象，确保字段名和原有代码完全一致
+        const newEmp = { 
+            id: Date.now(),           // 数字类型的ID
+            name: n,                   // 员工姓名
+            startDate: new Date().toISOString().split('T')[0], 
+            days: 15, 
+            dailyRate: 500, 
+            otRate: 60, 
+            records: {}                // 打卡记录
+        }; 
+        
+        // 添加到数组
+        employees.push(newEmp); 
+        
+        // 保存数据并刷新显示
+        saveData(); 
+        render(); 
+        
+        // 调试信息（可在控制台查看）
+        console.log("员工添加成功:", newEmp);
+    }
+}
 
     // ==================== 删除员工（只有管理员）====================
     function removeEmployee(id) { 
@@ -762,3 +772,4 @@
 </script>
 </body>
 </html>
+
