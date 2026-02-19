@@ -510,6 +510,7 @@
                 }
                 eBonos += parseFloat(rec.b || 0);
 
+
 // 如果标记了休或缺，整行锁定（管理员除外）
 const rowLocked = !isUnlocked && (rec.off || rec.abs); // 员工标记休或缺时整行锁定
 const sPunchLock = rowLocked || (!isUnlocked && rec.s !== ""); // 整行锁定或员工已打卡
@@ -520,14 +521,15 @@ const checkLock = rowLocked || (!isUnlocked && (rec.off || rec.abs)); // 复选�
                     <td><input type="checkbox" ${rec.off?'checked':''} ${checkLock?'disabled':''} onchange="updateState(${emp.id},${d},'off',this.checked)"> 休/L</td>
                     <td><input type="checkbox" ${rec.abs?'checked':''} ${checkLock?'disabled':''} onchange="updateState(${emp.id},${d},'abs',this.checked)"> 缺/A</td>
                     <td>
-    <input type="text" value="${rec.s}" ${isUnlocked?'':'readonly'} onchange="updateTime(${emp.id},${d},'s',this.value)">
-    <button class="btn-punch no-print" ${!isUnlocked && rec.s?'disabled':''} onclick="doPunch(${emp.id},${d},'s')">入/Ent.</button>
-</td>
-<td>
-    <input type="text" value="${rec.e}" ${isUnlocked?'':'readonly'} onchange="updateTime(${emp.id},${d},'e',this.value)">
-    <button class="btn-punch no-print" ${!isUnlocked && rec.e?'disabled':''} onclick="doPunch(${emp.id},${d},'e')">出/Sal.</button>
-</td>
-                    <td>${wh.toFixed(1)}h</td><td>${oh.toFixed(1)}h</td>
+                        <input type="text" value="${rec.s}" ${isUnlocked?'':'readonly'} onchange="updateTime(${emp.id},${d},'s',this.value)">
+                        <button class="btn-punch no-print" ${sPunchLock?'disabled':''} onclick="doPunch(${emp.id},${d},'s')">入/Ent.</button>
+                    </td>
+                    <td>
+                        <input type="text" value="${rec.e}" ${isUnlocked?'':'readonly'} onchange="updateTime(${emp.id},${d},'e',this.value)">
+                        <button class="btn-punch no-print" ${ePunchLock?'disabled':''} onclick="doPunch(${emp.id},${d},'e')">出/Sal.</button>
+                    </td>
+                    <td>${wh.toFixed(1)}h</td>
+                    <td>${oh.toFixed(1)}h</td>
                     <td><input type="number" value="${rec.b}" style="width:40px" ${!isUnlocked?'disabled':''} onchange="updateState(${emp.id},${d},'b',this.value)"></td>
                     <td style="font-weight:bold;">C$ ${pay.toFixed(2)}</td>
                 </tr>`;
@@ -1017,5 +1019,6 @@ function updateTime(empId, dayIdx, field, value) {
 }</script>
 </body>
 </html>
+
 
 
