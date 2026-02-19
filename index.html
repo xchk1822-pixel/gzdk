@@ -514,7 +514,7 @@
 const rowLocked = !isUnlocked && (rec.off || rec.abs); // 员工标记休或缺时整行锁定
 const sPunchLock = rowLocked || (!isUnlocked && rec.s !== ""); // 整行锁定或员工已打卡
 const ePunchLock = rowLocked || (!isUnlocked && rec.e !== ""); // 整行锁定或员工已打卡
-const checkLock = !isUnlocked && (rec.off || rec.abs); // 员工已标记则复选框禁用
+const checkLock = rowLocked || (!isUnlocked && (rec.off || rec.abs)); // 复选框同样受整行锁定影响
                 rowsHtml += `<tr class="${rowCls}">
                     <td><b>${cur.getMonth()+1}/${cur.getDate()}</b></td>
                     <td><input type="checkbox" ${rec.off?'checked':''} ${checkLock?'disabled':''} onchange="updateState(${emp.id},${d},'off',this.checked)"> 休/L</td>
@@ -1017,4 +1017,5 @@ function updateTime(empId, dayIdx, field, value) {
 }</script>
 </body>
 </html>
+
 
