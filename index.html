@@ -482,8 +482,266 @@
                 saveToCloud();
             }
         }, 5 * 60 * 1000);
+   // ==================== 历史记录功能 ====================
+const HISTORY_KEY = 'salary_history';
+
+// 获取历史记录
+function getHistory() {
+    const history = localStorage.getItem(HISTORY_KEY);
+    return history ? JSON.parse(history) : {};
+}
+
+// 保存当前月份到历史
+function saveMonthlyHistory() {
+    if (!checkPermission()) {
+        alert("需要管理员权限 / Requiere Admin");
+        return;
+    }
+    
+    // 计算当前汇总数据
+    let totalBase = 0, totalExtras = 0, totalBonos = 0, totalAll = 0;
+    const monthData = [];
+    
+    employees.forEach(emp => {
+        let eBase = 0, eExtras = 0, eBonos = 0;
+        
+        for(let d=0; d<emp.days; d++) {
+            const rec = emp.records[d] || { s:'', e:'', off:false, abs:false, b:0 };
+            
+            if (rec.abs) {
+                eBonos += parseFloat(rec.b || 0);
+            } else if (rec.off) {
+                eBase += parseFloat(emp.dailyRate);
+                eBonos += parseFloat(rec.b || 0);
+            } else {
+                eBase += parseFloat(emp.dailyRate);
+                if (rec.s && rec.e) {
+                    const wh = calculateHours(rec.s, rec.e);
+                    const oh = Math.max(0, wh - 9);
+                    eExtras += (oh * parseFloat(emp.otRate));
+                }
+                eBonos += parseFloat(rec.b || 0);
+            }
+        }
+        
+        const total = eBase + eExtras + eBonos;
+        totalBase += eBase;
+        totalExtras += eExtras;
+        totalBonos += eBonos;
+        totalAll += total;
+        
+        monthData.push({
+            name: emp.name,
+            base: eBase,
+            extras: eExtras,
+            bonos: eBonos,
+            total: total
+        });
+    });
+    
+    const now = new Date();
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const monthName = `${now.getFullYear()}年${now.getMonth()+1}月`;
+    
+    const history = getHistory();
+    history[monthKey] = {
+        month: monthName,
+        date: now.toISOString(),
+        employees: monthData,
+        summary: {
+            base: totalBase,
+            extras: totalExtras,
+            bonos: totalBonos,
+            total: totalAll
+        }
     };
+    
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    saveToCloud(); // 同步到云端
+    updateHistoryCards();
+    alert(`✅ 已保存 ${monthName} 的历史数据 / Historial guardado`);
+}
+
+// 显示历史记录模态框
+function showHistoryModal() {
+    // 创建模态框（如果不存在）
+    if (!document.getElementById('historyModal')) {
+        const modalHTML = `
+            <div id="historyModal" style="display:none; position:fixed; z-index:1001; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
+                <div style="background:white; padding:25px; border-radius:12px; width:600px; max-height:80vh; overflow-y:auto;">
+                    <h3 style="margin-top:0; color:#1976d2;">📊 历史薪资汇总 / Historial de Nómina</h3>
+                    <div style="margin-bottom:15px; display:flex; gap:10px;">
+                        <select id="historyMonthSelect" style="flex:2; padding:8px;" onchange="loadHistoryMonth()"></select>
+                        <button class="btn btn-danger" onclick="closeHistoryModal()" style="flex:1;">关闭 / Cerrar</button>
+                    </div>
+                    <div id="historyContent" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
+                        <p style="text-align:center; color:#999;">请选择月份查看 / Seleccione un mes</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    }
+    
+    const modal = document.getElementById('historyModal');
+    const select = document.getElementById('historyMonthSelect');
+    
+    const history = getHistory();
+    const months = Object.keys(history).sort().reverse();
+    
+    select.innerHTML = months.map(key => {
+        const h = history[key];
+        return `<option value="${key}">${h.month}</option>`;
+    }).join('');
+    
+    if (months.length > 0) {
+        loadHistoryMonth();
+    }
+    
+    modal.style.display = 'flex';
+}
+
+// 关闭历史记录模态框
+function closeHistoryModal() {
+    document.getElementById('historyModal').style.display = 'none';
+}
+
+// 加载选中的历史月份
+function loadHistoryMonth() {
+    const select = document.getElementById('historyMonthSelect');
+    const key = select.value;
+    if (!key) return;
+    
+    const history = getHistory();
+    const data = history[key];
+    if (!data) return;
+    
+    let html = `
+        <h4 style="margin-top:0; color:#b71c1c;">${data.month} 薪资汇总 / Resumen</h4>
+        <table style="width:100%; font-size:12px;">
+            <thead>
+                <tr style="background:#f5f5f5;">
+                    <th>员工 / Nombre</th><th>基本工资 / Base</th><th>加班费 / Extras</th><th>福利 / Bonos</th><th>合计 / Total</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    data.employees.forEach(emp => {
+        html += `<tr>
+            <td>${emp.name}</td>
+            <td>C$ ${emp.base.toFixed(2)}</td>
+            <td>C$ ${emp.extras.toFixed(2)}</td>
+            <td>C$ ${emp.bonos.toFixed(2)}</td>
+            <td style="font-weight:bold;">C$ ${emp.total.toFixed(2)}</td>
+        </tr>`;
+    });
+    
+    html += `
+            </tbody>
+            <tfoot>
+                <tr style="background:#fff9c4; font-weight:bold;">
+                    <td>合计 / Total</td>
+                    <td>C$ ${data.summary.base.toFixed(2)}</td>
+                    <td>C$ ${data.summary.extras.toFixed(2)}</td>
+                    <td>C$ ${data.summary.bonos.toFixed(2)}</td>
+                    <td style="color:#b71c1c;">C$ ${data.summary.total.toFixed(2)}</td>
+                </tr>
+            </tfoot>
+        </table>
+    `;
+    
+    document.getElementById('historyContent').innerHTML = html;
+}
+
+// 更新历史记录卡片
+function updateHistoryCards() {
+    // 创建卡片容器（如果不存在）
+    if (!document.getElementById('historyCards')) {
+        const cardsHTML = `
+            <div style="margin-top:20px; margin-bottom:20px;" class="no-print">
+                <h3 style="color:#1976d2;">📅 历史汇总 / Historial</h3>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:10px;" id="historyCards"></div>
+            </div>
+        `;
+        const summaryArea = document.querySelector('.summary-area');
+        if (summaryArea) {
+            summaryArea.insertAdjacentHTML('beforebegin', cardsHTML);
+        }
+    }
+    
+    const history = getHistory();
+    const cardsDiv = document.getElementById('historyCards');
+    if (!cardsDiv) return;
+    
+    const months = Object.keys(history).sort().reverse().slice(0, 6);
+    
+    if (months.length === 0) {
+        cardsDiv.innerHTML = '<div style="color:#999; text-align:center;">暂无历史数据 / Sin historial</div>';
+        return;
+    }
+    
+    cardsDiv.innerHTML = months.map(key => {
+        const h = history[key];
+        return `
+            <div style="background:#f5f5f5; padding:10px; border-radius:8px; text-align:center; cursor:pointer;" onclick="showHistoryMonth('${key}')">
+                <div style="font-weight:bold; color:#1976d2;">${h.month}</div>
+                <div style="font-size:18px; color:#b71c1c;">C$ ${h.summary.total.toFixed(0)}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// 显示特定月份的历史
+function showHistoryMonth(key) {
+    showHistoryModal();
+    const select = document.getElementById('historyMonthSelect');
+    if (select) {
+        select.value = key;
+        loadHistoryMonth();
+    }
+}
+
+// 在 render 函数最后调用 updateHistoryCards
+const originalRender = render;
+render = function() {
+    originalRender();
+    updateHistoryCards();
+};
+
+// 在按钮区域添加两个新按钮
+function addHistoryButtons() {
+    const btnGroup = document.querySelector('.btn-group');
+    if (btnGroup && !document.getElementById('historyBtnAdded')) {
+        const historyBtn1 = document.createElement('button');
+        historyBtn1.className = 'btn btn-primary';
+        historyBtn1.style.background = '#1976d2';
+        historyBtn1.innerHTML = '📅 保存本月历史 / Guardar Historial';
+        historyBtn1.onclick = saveMonthlyHistory;
+        
+        const historyBtn2 = document.createElement('button');
+        historyBtn2.className = 'btn btn-info';
+        historyBtn2.style.background = '#009688';
+        historyBtn2.innerHTML = '📊 查看历史记录 / Ver Historial';
+        historyBtn2.onclick = showHistoryModal;
+        
+        btnGroup.appendChild(historyBtn1);
+        btnGroup.appendChild(historyBtn2);
+        
+        // 添加标记避免重复添加
+        const marker = document.createElement('span');
+        marker.id = 'historyBtnAdded';
+        marker.style.display = 'none';
+        btnGroup.appendChild(marker);
+    }
+}
+
+// 在页面加载完成后添加按钮
+window.addEventListener('load', function() {
+    setTimeout(addHistoryButtons, 500);
+}); };
 </script>
 </body>
 </html>
+
 
