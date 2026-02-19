@@ -18,6 +18,9 @@
         .btn-restore { background: #8e24aa; color: white; }
         .btn-print { background: #1565c0; color: white; }
         .btn-danger { background: #d32f2f; color: white; }
+        .btn-primary { background: #1976d2; color: white; }
+        .btn-info { background: #009688; color: white; }
+        .btn-success { background: #43a047; color: white; }
         .row-normal { background-color: #ffffff; }
         .row-empty { background-color: #fff3e0 !important; } 
         .row-off { background-color: #e3f2fd !important; }    
@@ -31,6 +34,18 @@
         }
         .modal-content { background: white; padding: 25px; border-radius: 12px; width: 320px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .modal-content input { width: 80%; padding: 10px; margin: 15px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 20px; text-align: center; }
+        #settlementModal {
+            display: none; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center;
+        }
+        #historyModal {
+            display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center;
+        }
+        #printSettlementModal {
+            display: none; position: fixed; z-index: 1003; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center;
+        }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; font-size: 12px; table-layout: fixed; }
         th, td { border: 1px solid #dee2e6; padding: 8px 2px; text-align: center; overflow: hidden; }
         th { background-color: #f8f9fa; color: #555; font-size: 11px; height: 40px; }
@@ -46,7 +61,7 @@
         .signature-line { border-top: 1.5px solid #333; width: 220px; text-align: center; font-size: 11px; font-weight: bold; padding-top: 5px; }
         .summary-area { margin-top: 50px; page-break-before: always; border-top: 3px solid #b71c1c; padding-top: 20px; }
         @media print {
-            .no-print, .btn-punch, #passwordModal { display: none !important; }
+            .no-print, .btn-punch, #passwordModal, #settlementModal, #historyModal, #printSettlementModal { display: none !important; }
             .page-break { page-break-after: always; border-bottom: 1px dashed #ccc; margin-bottom: 30px; }
             .container { box-shadow: none; padding: 0; }
         }
@@ -57,7 +72,7 @@
 <div id="passwordModal">
     <div class="modal-content">
         <h3 style="margin:0">认证 / Autenticación</h3>
-        <p style="font-size:11px; color:#666;">请输入管理密码 / Contraseña</p >
+        <p style="font-size:11px; color:#666;">请输入管理密码 / Contraseña</p>
         <input type="password" id="adminPassInput" placeholder="******" onkeydown="if(event.keyCode==13) verifyPassword()">
         <div style="display:flex; justify-content: space-around;">
             <button class="btn btn-danger" onclick="closeModal()">取消 / Cancelar</button>
@@ -66,10 +81,81 @@
     </div>
 </div>
 
+<div id="settlementModal">
+    <div style="background:white; padding:25px; border-radius:12px; width:500px;">
+        <h3 style="margin-top:0; color:#1976d2;">💰 薪资结算 / Liquidación de Nómina</h3>
+        <div style="margin:15px 0;">
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">结算类型 / Tipo:</label>
+            <select id="settlementType" style="width:100%; padding:8px; margin-bottom:15px;" onchange="toggleSettlementType()">
+                <option value="all">全员结算 / Todos los Empleados</option>
+                <option value="single">单个员工 / Individual</option>
+            </select>
+        </div>
+        <div id="singleEmployeeSelect" style="display:none; margin-bottom:15px;">
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">选择员工 / Seleccionar Empleado:</label>
+            <select id="settlementEmployee" style="width:100%; padding:8px;"></select>
+        </div>
+        <div style="margin-bottom:15px;">
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">开始日期 / Fecha de Inicio:</label>
+            <input type="date" id="settlementStartDate" style="width:100%; padding:8px;">
+        </div>
+        <div style="margin-bottom:15px;">
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">结束日期 / Fecha de Fin:</label>
+            <input type="date" id="settlementEndDate" style="width:100%; padding:8px;">
+        </div>
+        <div style="display:flex; gap:10px; justify-content: flex-end;">
+            <button class="btn btn-danger" onclick="closeSettlementModal()">取消 / Cancelar</button>
+            <button class="btn btn-success" onclick="processSettlement()" style="background:#43a047;">确认结算 / Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<div id="printSettlementModal">
+    <div style="background:white; padding:25px; border-radius:12px; width:700px; max-height:80vh; overflow-y:auto;">
+        <div style="text-align:center; margin-bottom:20px;">
+            <h2 style="color:#b71c1c; margin:0;">中国年餐厅 / Restaurante China Yearly</h2>
+            <h3 style="margin:5px 0;">薪资结算单 / Liquidación de Nómina</h3>
+            <p style="color:#666; font-size:12px;" id="printSettlementPeriod"></p>
+        </div>
+        <div id="printSettlementContent"></div>
+        <div style="margin-top:30px; display:flex; justify-content:space-between;">
+            <div style="text-align:center; width:200px;">
+                <div style="border-top:1px solid #333; padding-top:5px;">负责人签名 / Firma del Responsable</div>
+            </div>
+            <div style="text-align:center; width:200px;">
+                <div style="border-top:1px solid #333; padding-top:5px;">财务签名 / Firma del Financiero</div>
+            </div>
+            <div style="text-align:center; width:200px;">
+                <div style="border-top:1px solid #333; padding-top:5px;">日期 / Fecha</div>
+            </div>
+        </div>
+        <div style="margin-top:20px; text-align:center;">
+            <button class="btn btn-print" onclick="window.print()" style="width:120px;">打印 / Imprimir</button>
+            <button class="btn btn-danger" onclick="closePrintModal()" style="width:120px; margin-left:10px;">关闭 / Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<div id="historyModal">
+    <div style="background:white; padding:25px; border-radius:12px; width:700px; max-height:80vh; overflow-y:auto;">
+        <h3 style="margin-top:0; color:#1976d2;">📊 历史结算记录 / Historial de Liquidaciones</h3>
+        <div style="margin-bottom:15px; display:flex; gap:10px;">
+            <select id="historyRecordSelect" style="flex:2; padding:8px;" onchange="loadHistoryRecord()"></select>
+            <button class="btn btn-danger" onclick="closeHistoryModal()" style="flex:1;">关闭 / Cerrar</button>
+        </div>
+        <div id="historyContent" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
+            <p style="text-align:center; color:#999;">请选择记录查看 / Seleccione un registro</p>
+        </div>
+        <div style="margin-top:15px; text-align:center;">
+            <button class="btn btn-print" onclick="printCurrentHistory()">打印当前记录 / Imprimir</button>
+        </div>
+    </div>
+</div>
+
 <div class="container">
     <div class="header-box">
         <h1>中国年餐厅薪资管理系统</h1>
-        <p>Sistema de Nómina - Restaurante China Yearly</p >
+        <p>Sistema de Nómina - Restaurante China Yearly</p>
     </div>
 
     <div class="btn-group no-print">
@@ -80,6 +166,8 @@
         <button class="btn btn-restore" onclick="triggerRestore()">📂 恢复文件 / Importar</button>
         <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(this)">
         <button class="btn btn-print" onclick="window.print()">🖨️ 打印工资单 / Imprimir</button>
+        <button class="btn btn-primary" onclick="openSettlementModal()" style="background:#1976d2;">💰 薪资结算 / Liquidar</button>
+        <button class="btn btn-info" onclick="viewHistory()" style="background:#009688;">📊 历史记录 / Historial</button>
         <button class="btn btn-danger" onclick="clearAllData()">⚠️ 清空全部 / Limpiar</button>
         <span id="cloud-status" style="font-size:11px; margin-left:10px; color:#4CAF50;">☁️ 云端 / Nube</span>
     </div>
@@ -127,6 +215,7 @@
     const ADMIN_PASSWORD = "123456"; 
     const DB_NAME = 'rest_salary_complete_v6';
     const BACKUP_NAME = 'rest_salary_backup';
+    const HISTORY_KEY = 'salary_history';
     const CLOUD_COLLECTION = 'salaryData';
     
     let isUnlocked = false; 
@@ -199,8 +288,10 @@
         
         try {
             syncInProgress = true;
+            const history = getHistory();
             await firestore.collection(CLOUD_COLLECTION).doc('mainData').set({
                 employees: employees,
+                history: history,
                 lastSync: new Date().toISOString()
             });
             document.getElementById('cloud-status').innerHTML = '☁️ 云端: ✅ 已同步 ' + new Date().toLocaleTimeString();
@@ -224,11 +315,14 @@
                 const cloudData = doc.data();
                 if (cloudData.employees && cloudData.employees.length > 0) {
                     employees = cloudData.employees;
-                    saveData(); // 保存到本地
-                    document.getElementById('cloud-status').innerHTML = '☁️ 云端: ✅ 已加载云端数据';
-                    render();
-                    return true;
                 }
+                if (cloudData.history) {
+                    localStorage.setItem(HISTORY_KEY, JSON.stringify(cloudData.history));
+                }
+                saveData();
+                document.getElementById('cloud-status').innerHTML = '☁️ 云端: ✅ 已加载云端数据';
+                render();
+                return true;
             }
             loadData();
             return false;
@@ -239,15 +333,15 @@
         }
     }
 
-    // --- MEJORA: Sistema de Carga con Auto-Recuperación ---
     function loadData() {
         const mainData = localStorage.getItem(DB_NAME);
         const backupData = localStorage.getItem(BACKUP_NAME);
+        const historyData = localStorage.getItem(HISTORY_KEY);
 
         if (mainData) {
             employees = JSON.parse(mainData);
         } else if (backupData) {
-            if (confirm("⚠️ 检测到主数据丢失，是否从自动备份中恢复？\nSe detectó pérdida de datos, ¿restaurar desde backup automático?")) {
+            if (confirm("⚠️ 检测到主数据丢失，是否从自动备份中恢复？\n¿Restaurar desde backup?")) {
                 employees = JSON.parse(backupData);
                 saveData();
             }
@@ -256,7 +350,6 @@
         }
     }
 
-    // --- MEJORA: Guardado Atómico y Doble Copia ---
     function saveData() {
         if (!employees) return;
         const dataStr = JSON.stringify(employees);
@@ -271,14 +364,32 @@
     }
 
     function openModal() {
-        if (isUnlocked) { isUnlocked = false; updateLockUI(); alert("已退出管理模式 / Modo Admin Cerrado"); render(); } 
-        else { document.getElementById('passwordModal').style.display = 'flex'; document.getElementById('adminPassInput').focus(); }
+        if (isUnlocked) { 
+            isUnlocked = false; 
+            updateLockUI(); 
+            alert("已退出管理模式 / Modo Admin Cerrado"); 
+            render(); 
+        } else { 
+            document.getElementById('passwordModal').style.display = 'flex'; 
+            document.getElementById('adminPassInput').focus(); 
+        }
     }
-    function closeModal() { document.getElementById('passwordModal').style.display = 'none'; }
+    
+    function closeModal() { 
+        document.getElementById('passwordModal').style.display = 'none'; 
+    }
+    
     function verifyPassword() {
-        if (document.getElementById('adminPassInput').value === ADMIN_PASSWORD) { isUnlocked = true; updateLockUI(); closeModal(); render(); } 
-        else { alert("密码错误 / Incorrecto"); }
+        if (document.getElementById('adminPassInput').value === ADMIN_PASSWORD) { 
+            isUnlocked = true; 
+            updateLockUI(); 
+            closeModal(); 
+            render(); 
+        } else { 
+            alert("密码错误 / Contraseña Incorrecta"); 
+        }
     }
+    
     function updateLockUI() {
         const s = document.getElementById('lockStatusDisplay');
         const b = document.getElementById('unlockBtn');
@@ -287,64 +398,85 @@
         b.innerHTML = isUnlocked ? "🔒 退出管理 / Salir" : "🔑 管理员解锁 / Desbloquear";
     }
 
-    function checkPermission() { if (!isUnlocked) alert("需要管理员权限 / Requiere Admin"); return isUnlocked; }
+    function checkPermission() { return isUnlocked; }
 
+    // ==================== 打卡功能 ====================
     function doPunch(empId, dayIdx, field) {
         const emp = employees.find(e => e.id === empId);
+        if (!emp) return;
         if (!emp.records[dayIdx]) emp.records[dayIdx] = { s:'', e:'', off:false, abs:false, b:0 };
-        if (!isUnlocked && emp.records[dayIdx][field]) { alert("不可修改 / No se puede modificar"); return; }
+        
+        // 管理员可以修改任何打卡，员工不能修改已打卡
+        if (!isUnlocked && emp.records[dayIdx][field]) { 
+            alert("不可修改 / No se puede modificar"); 
+            return; 
+        }
         
         const now = new Date();
         const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
         emp.records[dayIdx][field] = t;
-        saveData(); render();
-    }
-
-    function addEmployee() {
-    if (!checkPermission()) return;
-    const n = prompt("输入员工姓名 / Nombre:");
-    if (n && n.trim() !== "") { 
-        const newEmp = { 
-            id: Date.now(), 
-            name: n.trim(), 
-            startDate: new Date().toISOString().split('T')[0], 
-            days: 15, 
-            dailyRate: 500, 
-            otRate: 60, 
-            records: {} 
-        };
-        employees.push(newEmp);
-        localStorage.setItem(DB_NAME, JSON.stringify(employees));
-        if (employees.length > 0) {
-            localStorage.setItem(BACKUP_NAME, JSON.stringify(employees));
-        }
+        saveData(); 
         render();
-        alert("✅ 员工 " + n.trim() + " 添加成功");
     }
-}
 
+    // ==================== 添加员工 ====================
+    function addEmployee() {
+        if (!isUnlocked) return;
+        const n = prompt("输入员工姓名 / Nombre:");
+        if (n && n.trim() !== "") { 
+            employees.push({ 
+                id: Date.now(), 
+                name: n.trim(), 
+                startDate: new Date().toISOString().split('T')[0], 
+                days: 15, 
+                dailyRate: 500, 
+                otRate: 60, 
+                records: {} 
+            }); 
+            saveData(); 
+            render(); 
+        }
+    }
+
+    // ==================== 修改配置 ====================
     function updateConfig(id, f, v) { 
         if (!isUnlocked) { render(); return; } 
         const emp = employees.find(e => e.id === id); 
-        if (emp) { emp[f] = v; saveData(); render(); } 
+        if (emp) { 
+            emp[f] = f === 'days' || f === 'dailyRate' || f === 'otRate' ? parseFloat(v) : v; 
+            saveData(); 
+            render(); 
+        } 
     }
     
+    // ==================== 修改状态（休/缺/福利）====================
     function updateState(empId, dayIdx, field, val) {
         const emp = employees.find(e => e.id === empId);
+        if (!emp) return;
         if (!emp.records[dayIdx]) emp.records[dayIdx] = { s:'', e:'', off:false, abs:false, b:0 };
         const r = emp.records[dayIdx];
 
+        // 管理员可以修改任何状态，员工不能修改已标记的
         if (!isUnlocked) {
-            if (field === 'b') { render(); return; }
-            if (r[field] === true && val === false) { alert("已锁定 / Bloqueado"); render(); return; }
+            if (field === 'b') { 
+                render(); 
+                return; 
+            }
+            if (r[field] === true && val === false) { 
+                alert("已锁定 / Bloqueado"); 
+                render(); 
+                return; 
+            }
         }
 
         if (field === 'off' && val === true) r.abs = false;
         if (field === 'abs' && val === true) r.off = false;
-        r[field] = val;
-        saveData(); render();
+        r[field] = field === 'b' ? parseFloat(val) : val;
+        saveData(); 
+        render();
     }
 
+    // ==================== 计算工时 ====================
     function calculateHours(s, e) {
         if(!s || !e) return 0;
         let d1 = new Date(`2000-01-01T${s}`), d2 = new Date(`2000-01-01T${e}`);
@@ -352,6 +484,7 @@
         return (d2 - d1) / 3600000;
     }
 
+    // ==================== 渲染页面 ====================
     function render() {
         const list = document.getElementById('employees-content');
         list.innerHTML = ""; 
@@ -377,17 +510,22 @@
                 }
                 eBonos += parseFloat(rec.b || 0);
 
-                const isOffOrAbs = (rec.off || rec.abs);
-                const checkLock = !isUnlocked && (isOffOrAbs || rec.s !== "" || rec.e !== "");
-                const sPunchLock = !isUnlocked && (rec.s !== "" || isOffOrAbs);
-                const ePunchLock = !isUnlocked && (rec.e !== "" || isOffOrAbs);
-
+               // 管理员可以修改任何内容，员工不能修改已打卡的
+const sPunchLock = !isUnlocked && rec.s !== "";  // 员工已打卡则禁用
+const ePunchLock = !isUnlocked && rec.e !== "";  // 员工已打卡则禁用
+const checkLock = !isUnlocked && (rec.off || rec.abs);  // 员工已标记则禁用
                 rowsHtml += `<tr class="${rowCls}">
                     <td><b>${cur.getMonth()+1}/${cur.getDate()}</b></td>
                     <td><input type="checkbox" ${rec.off?'checked':''} ${checkLock?'disabled':''} onchange="updateState(${emp.id},${d},'off',this.checked)"> 休/L</td>
                     <td><input type="checkbox" ${rec.abs?'checked':''} ${checkLock?'disabled':''} onchange="updateState(${emp.id},${d},'abs',this.checked)"> 缺/A</td>
-                    <td><input type="text" value="${rec.s}" readonly><button class="btn-punch no-print" ${sPunchLock?'disabled':''} onclick="doPunch(${emp.id},${d},'s')">入/Ent.</button></td>
-                    <td><input type="text" value="${rec.e}" readonly><button class="btn-punch no-print" ${ePunchLock?'disabled':''} onclick="doPunch(${emp.id},${d},'e')">出/Sal.</button></td>
+                    <td>
+    <input type="text" value="${rec.s}" ${isUnlocked?'':'readonly'} onchange="updateTime(${emp.id},${d},'s',this.value)">
+    <button class="btn-punch no-print" ${!isUnlocked && rec.s?'disabled':''} onclick="doPunch(${emp.id},${d},'s')">入/Ent.</button>
+</td>
+<td>
+    <input type="text" value="${rec.e}" ${isUnlocked?'':'readonly'} onchange="updateTime(${emp.id},${d},'e',this.value)">
+    <button class="btn-punch no-print" ${!isUnlocked && rec.e?'disabled':''} onclick="doPunch(${emp.id},${d},'e')">出/Sal.</button>
+</td>
                     <td>${wh.toFixed(1)}h</td><td>${oh.toFixed(1)}h</td>
                     <td><input type="number" value="${rec.b}" style="width:40px" ${!isUnlocked?'disabled':''} onchange="updateState(${emp.id},${d},'b',this.value)"></td>
                     <td style="font-weight:bold;">C$ ${pay.toFixed(2)}</td>
@@ -402,20 +540,20 @@
             list.innerHTML += `<div class="page-break">
                 <h3 style="color:#1565c0; border-bottom:2px solid #1565c0; margin-top:20px;">${emp.name} - 工资明细 / Recibo de Pago</h3>
                 <div class="individual-config no-print">
-                    <div class="config-item"><label>开始日期 / Inicio:</label><input type="date" value="${emp.startDate}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'startDate',this.value)"></div>
+                    <div class="config-item"><label>开始日期 / Fecha Inicio:</label><input type="date" value="${emp.startDate}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'startDate',this.value)"></div>
                     <div class="config-item"><label>结算天数 / Días:</label><input type="number" value="${emp.days}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'days',this.value)"></div>
                     <div class="config-item"><label>日薪 / Salario Diario:</label><input type="number" value="${emp.dailyRate}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'dailyRate',this.value)"></div>
                     <div class="config-item"><label>加班时薪 / Hora Extra:</label><input type="number" value="${emp.otRate}" ${isUnlocked?'':'readonly'} onchange="updateConfig(${emp.id},'otRate',this.value)"></div>
                     <button class="btn btn-danger" onclick="removeEmployee(${emp.id})" style="height:30px; margin-top:15px; display:${isUnlocked?'block':'none'}">删除员工 / Borrar</button>
                 </div>
                 <table><thead><tr>
-                    <th style="width:10%">日期/Fecha</th><th style="width:8%">休/Libre</th><th style="width:8%">缺/Ausen</th>
-                    <th style="width:18%">入/Entrada</th><th style="width:18%">出/Salida</th><th style="width:8%">工时/H</th>
+                    <th style="width:10%">日期/Fecha</th><th style="width:8%">休/L</th><th style="width:8%">缺/A</th>
+                    <th style="width:18%">入/Ent.</th><th style="width:18%">出/Sal.</th><th style="width:8%">工时/H</th>
                     <th style="width:8%">加班/Ex</th><th style="width:10%">福利/Bono</th><th style="width:12%">小计/Sub</th>
                 </tr></thead>
                 <tbody>${rowsHtml}</tbody></table>
                 <div class="emp-stat-box">
-                    <div style="font-size:12px; color:#555;">Base: C$ ${eBase.toFixed(2)} | Extras: C$ ${eExtras.toFixed(2)} | Bono: C$ ${eBonos.toFixed(2)}</div>
+                    <div>Base: C$ ${eBase.toFixed(2)} | Extras: C$ ${eExtras.toFixed(2)} | Bono: C$ ${eBonos.toFixed(2)}</div>
                     <div style="font-size:18px; color:#b71c1c; font-weight:bold;">TOTAL: C$ ${total.toFixed(2)}</div>
                 </div>
                 <div class="signature-row"><div class="signature-line">Firma del Empleado (员工签名)</div></div>
@@ -428,10 +566,18 @@
         document.getElementById('total-all').innerText = "C$ " + gAll.toFixed(2);
     }
 
-    function removeEmployee(id) { if (checkPermission() && confirm("确定删除？")) { employees = employees.filter(e => e.id !== id); saveData(); render(); } }
+    function removeEmployee(id) { 
+        if (!isUnlocked) return;
+        if (confirm("确定删除？ / ¿Eliminar?")) { 
+            employees = employees.filter(e => e.id !== id); 
+            saveData(); 
+            render(); 
+        } 
+    }
     
     function clearAllData() { 
-        if (checkPermission() && confirm("⚠️ 确定清空所有数据？这将同时清除备份！")) { 
+        if (!isUnlocked) return;
+        if (confirm("⚠️ 确定清空所有数据？这将同时清除备份！\n¿Limpiar todos los datos?")) { 
             employees = []; 
             localStorage.removeItem(DB_NAME);
             localStorage.removeItem(BACKUP_NAME);
@@ -442,7 +588,13 @@
 
     function exportData() {
         if (employees.length === 0) { alert("没有数据可以备份 / No hay datos"); return; }
-        const d = JSON.stringify(employees);
+        const history = getHistory();
+        const exportObj = {
+            employees: employees,
+            history: history,
+            exportDate: new Date().toISOString()
+        };
+        const d = JSON.stringify(exportObj);
         const b = new Blob([d], {type: "application/json"});
         const a = document.createElement("a");
         a.href = URL.createObjectURL(b);
@@ -450,14 +602,25 @@
         a.click();
     }
 
-    function triggerRestore() { if(checkPermission()) document.getElementById('importFile').click(); }
+    function triggerRestore() { 
+        if (!isUnlocked) return;
+        document.getElementById('importFile').click(); 
+    }
     
     function importData(i) {
         const r = new FileReader();
         r.onload = (e) => { 
             try { 
                 const temp = JSON.parse(e.target.result); 
-                if (Array.isArray(temp)) {
+                if (temp.employees && Array.isArray(temp.employees)) {
+                    employees = temp.employees;
+                    if (temp.history) {
+                        localStorage.setItem(HISTORY_KEY, JSON.stringify(temp.history));
+                    }
+                    saveData(); 
+                    render(); 
+                    alert("恢复成功 / Restaurado"); 
+                } else if (Array.isArray(temp)) {
                     employees = temp;
                     saveData(); 
                     render(); 
@@ -466,12 +629,358 @@
                     throw new Error();
                 }
             } catch(err) { 
-                alert("文件格式不正确 / Formato de archivo inválido"); 
+                alert("文件格式不正确 / Formato inválido"); 
             } 
         };
         r.readAsText(i.files[0]);
     }
 
+    // ==================== 结算功能 ====================
+    function openSettlementModal() {
+        if (!isUnlocked) return;
+        
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('settlementStartDate').value = today;
+        document.getElementById('settlementEndDate').value = today;
+        
+        const empSelect = document.getElementById('settlementEmployee');
+        empSelect.innerHTML = employees.map(emp => `<option value="${emp.id}">${emp.name}</option>`).join('');
+        
+        document.getElementById('settlementModal').style.display = 'flex';
+    }
+
+    function closeSettlementModal() {
+        document.getElementById('settlementModal').style.display = 'none';
+    }
+
+    function toggleSettlementType() {
+        const type = document.getElementById('settlementType').value;
+        document.getElementById('singleEmployeeSelect').style.display = type === 'single' ? 'block' : 'none';
+    }
+
+    function processSettlement() {
+        const type = document.getElementById('settlementType').value;
+        const startDate = document.getElementById('settlementStartDate').value;
+        const endDate = document.getElementById('settlementEndDate').value;
+        
+        if (!startDate || !endDate) {
+            alert("请选择日期范围 / Seleccione fechas");
+            return;
+        }
+        
+        if (startDate > endDate) {
+            alert("开始日期不能大于结束日期 / Fecha inicio no puede ser mayor que fecha fin");
+            return;
+        }
+        
+        let employeesToSettle = [];
+        if (type === 'all') {
+            employeesToSettle = employees;
+        } else {
+            const empId = parseInt(document.getElementById('settlementEmployee').value);
+            const emp = employees.find(e => e.id === empId);
+            if (emp) employeesToSettle = [emp];
+        }
+        
+        if (employeesToSettle.length === 0) {
+            alert("没有员工数据 / No hay empleados");
+            return;
+        }
+        
+        // 计算选定日期范围内的数据
+        let totalBase = 0, totalExtras = 0, totalBonos = 0, totalAll = 0;
+        const settlementData = [];
+        
+        employeesToSettle.forEach(emp => {
+            let eBase = 0, eExtras = 0, eBonos = 0;
+            const sDate = new Date(emp.startDate + "T00:00:00");
+            let daysInPeriod = 0;
+            
+            for(let d=0; d<emp.days; d++) {
+                const curDate = new Date(sDate);
+                curDate.setDate(sDate.getDate() + d);
+                const dateStr = curDate.toISOString().split('T')[0];
+                
+                if (dateStr >= startDate && dateStr <= endDate) {
+                    daysInPeriod++;
+                    const rec = emp.records[d] || { s:'', e:'', off:false, abs:false, b:0 };
+                    
+                    if (rec.abs) {
+                        eBonos += parseFloat(rec.b || 0);
+                    } else if (rec.off) {
+                        eBase += parseFloat(emp.dailyRate);
+                        eBonos += parseFloat(rec.b || 0);
+                    } else {
+                        eBase += parseFloat(emp.dailyRate);
+                        if (rec.s && rec.e) {
+                            const wh = calculateHours(rec.s, rec.e);
+                            const oh = Math.max(0, wh - 9);
+                            eExtras += (oh * parseFloat(emp.otRate));
+                        }
+                        eBonos += parseFloat(rec.b || 0);
+                    }
+                }
+            }
+            
+            const total = eBase + eExtras + eBonos;
+            totalBase += eBase;
+            totalExtras += eExtras;
+            totalBonos += eBonos;
+            totalAll += total;
+            
+            settlementData.push({
+                name: emp.name,
+                base: eBase,
+                extras: eExtras,
+                bonos: eBonos,
+                total: total,
+                days: daysInPeriod
+            });
+        });
+        
+        // 生成记录名称
+        const recordName = type === 'all' 
+            ? `全员结算 ${startDate} 至 ${endDate}`
+            : `${employeesToSettle[0].name} ${startDate} 至 ${endDate}`;
+        const recordKey = `${startDate}_至_${endDate}_${Date.now()}`;
+        
+        // 保存到历史
+        const history = getHistory();
+        history[recordKey] = {
+            name: recordName,
+            date: new Date().toISOString(),
+            employees: settlementData,
+            summary: {
+                base: totalBase,
+                extras: totalExtras,
+                bonos: totalBonos,
+                total: totalAll
+            }
+        };
+        
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        saveToCloud();
+        
+        // 显示打印预览
+        showSettlementPrint(recordName, startDate, endDate, settlementData, totalAll);
+        
+        closeSettlementModal();
+    }
+
+    function showSettlementPrint(name, startDate, endDate, data, total) {
+        document.getElementById('printSettlementPeriod').innerHTML = `${name}<br>${startDate} ${endDate}`;
+        
+        let html = `
+            <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                <thead>
+                    <tr style="background:#f5f5f5;">
+                        <th style="border:1px solid #ddd; padding:8px;">员工 / Empleado</th>
+                        <th style="border:1px solid #ddd; padding:8px;">出勤天数 / Días</th>
+                        <th style="border:1px solid #ddd; padding:8px;">基本工资 / Base</th>
+                        <th style="border:1px solid #ddd; padding:8px;">加班费 / Extras</th>
+                        <th style="border:1px solid #ddd; padding:8px;">福利 / Bonos</th>
+                        <th style="border:1px solid #ddd; padding:8px;">合计 / Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        data.forEach(emp => {
+            html += `<tr>
+                <td style="border:1px solid #ddd; padding:8px;">${emp.name}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:center;">${emp.days || 0}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:right;">C$ ${emp.base.toFixed(2)}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:right;">C$ ${emp.extras.toFixed(2)}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:right;">C$ ${emp.bonos.toFixed(2)}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:right; font-weight:bold;">C$ ${emp.total.toFixed(2)}</td>
+            </tr>`;
+        });
+        
+        html += `
+                </tbody>
+                <tfoot>
+                    <tr style="background:#fff9c4; font-weight:bold;">
+                        <td colspan="5" style="border:1px solid #ddd; padding:8px; text-align:right;">总计 / Total General：</td>
+                        <td style="border:1px solid #ddd; padding:8px; text-align:right; color:#b71c1c;">C$ ${total.toFixed(2)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        `;
+        
+        document.getElementById('printSettlementContent').innerHTML = html;
+        document.getElementById('printSettlementModal').style.display = 'flex';
+    }
+
+    function closePrintModal() {
+        document.getElementById('printSettlementModal').style.display = 'none';
+    }
+
+    // ==================== 历史记录功能 ====================
+    function getHistory() {
+        const history = localStorage.getItem(HISTORY_KEY);
+        return history ? JSON.parse(history) : {};
+    }
+
+    function viewHistory() {
+        if (!isUnlocked) return;
+        
+        const history = getHistory();
+        const records = Object.keys(history).sort().reverse();
+        
+        if (records.length === 0) {
+            alert("暂无历史记录 / No hay historial");
+            return;
+        }
+        
+        const select = document.getElementById('historyRecordSelect');
+        select.innerHTML = records.map(key => {
+            const h = history[key];
+            return `<option value="${key}">${h.name} - C$${h.summary.total.toFixed(2)}</option>`;
+        }).join('');
+        
+        loadHistoryRecord();
+        document.getElementById('historyModal').style.display = 'flex';
+    }
+
+    function closeHistoryModal() {
+        document.getElementById('historyModal').style.display = 'none';
+    }
+
+    function loadHistoryRecord() {
+        const select = document.getElementById('historyRecordSelect');
+        const key = select.value;
+        if (!key) return;
+        
+        const history = getHistory();
+        const data = history[key];
+        if (!data) return;
+        
+        let html = `
+            <h4 style="margin-top:0; color:#b71c1c;">${data.name}</h4>
+            <p style="font-size:12px; color:#666;">结算日期 / Fecha: ${new Date(data.date).toLocaleDateString()}</p>
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f5f5f5;">
+                        <th style="border:1px solid #ddd; padding:8px;">员工 / Empleado</th>
+                        <th style="border:1px solid #ddd; padding:8px;">基本工资 / Base</th>
+                        <th style="border:1px solid #ddd; padding:8px;">加班费 / Extras</th>
+                        <th style="border:1px solid #ddd; padding:8px;">福利 / Bonos</th>
+                        <th style="border:1px solid #ddd; padding:8px;">合计 / Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        data.employees.forEach(emp => {
+            html += `<tr>
+                <td style="border:1px solid #ddd; padding:8px;">${emp.name}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:right;">C$ ${emp.base.toFixed(2)}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:right;">C$ ${emp.extras.toFixed(2)}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:right;">C$ ${emp.bonos.toFixed(2)}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:right; font-weight:bold;">C$ ${emp.total.toFixed(2)}</td>
+            </tr>`;
+        });
+        
+        html += `
+                </tbody>
+                <tfoot>
+                    <tr style="background:#fff9c4; font-weight:bold;">
+                        <td colspan="4" style="border:1px solid #ddd; padding:8px; text-align:right;">总计 / Total General：</td>
+                        <td style="border:1px solid #ddd; padding:8px; text-align:right; color:#b71c1c;">C$ ${data.summary.total.toFixed(2)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        `;
+        
+        document.getElementById('historyContent').innerHTML = html;
+    }
+
+    function printCurrentHistory() {
+        const select = document.getElementById('historyRecordSelect');
+        const key = select.value;
+        if (!key) return;
+        
+        const history = getHistory();
+        const data = history[key];
+        if (!data) return;
+        
+        // 构建打印内容
+        let html = `
+            <div style="text-align:center; margin-bottom:20px;">
+                <h2 style="color:#b71c1c; margin:0;">中国年餐厅 / Restaurante China Yearly</h2>
+                <h3 style="margin:5px 0;">历史结算单 / Historial de Liquidación</h3>
+                <p style="color:#666; font-size:12px;">${data.name}</p>
+                <p style="color:#666; font-size:12px;">结算日期 / Fecha: ${new Date(data.date).toLocaleDateString()}</p>
+            </div>
+            <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                <thead>
+                    <tr style="background:#f5f5f5;">
+                        <th style="border:1px solid #ddd; padding:8px;">员工 / Empleado</th>
+                        <th style="border:1px solid #ddd; padding:8px;">基本工资 / Base</th>
+                        <th style="border:1px solid #ddd; padding:8px;">加班费 / Extras</th>
+                        <th style="border:1px solid #ddd; padding:8px;">福利 / Bonos</th>
+                        <th style="border:1px solid #ddd; padding:8px;">合计 / Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        data.employees.forEach(emp => {
+            html += `<tr>
+                <td style="border:1px solid #ddd; padding:8px;">${emp.name}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:right;">C$ ${emp.base.toFixed(2)}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:right;">C$ ${emp.extras.toFixed(2)}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:right;">C$ ${emp.bonos.toFixed(2)}</td>
+                <td style="border:1px solid #ddd; padding:8px; text-align:right; font-weight:bold;">C$ ${emp.total.toFixed(2)}</td>
+            </tr>`;
+        });
+        
+        html += `
+                </tbody>
+                <tfoot>
+                    <tr style="background:#fff9c4; font-weight:bold;">
+                        <td colspan="4" style="border:1px solid #ddd; padding:8px; text-align:right;">总计 / Total General：</td>
+                        <td style="border:1px solid #ddd; padding:8px; text-align:right; color:#b71c1c;">C$ ${data.summary.total.toFixed(2)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div style="margin-top:30px; display:flex; justify-content:space-between;">
+                <div style="text-align:center; width:200px;">
+                    <div style="border-top:1px solid #333; padding-top:5px;">负责人签名 / Firma del Responsable</div>
+                </div>
+                <div style="text-align:center; width:200px;">
+                    <div style="border-top:1px solid #333; padding-top:5px;">财务签名 / Firma del Financiero</div>
+                </div>
+                <div style="text-align:center; width:200px;">
+                    <div style="border-top:1px solid #333; padding-top:5px;">日期 / Fecha</div>
+                </div>
+            </div>
+        `;
+        
+        // 创建打印窗口
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>历史结算单 - ${data.name}</title>
+                <style>
+                    body { font-family: 'Segoe UI', sans-serif; padding: 20px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #ddd; padding: 8px; }
+                    th { background: #f5f5f5; }
+                    @media print {
+                        body { padding: 0; }
+                    }
+                </style>
+            </head>
+            <body>${html}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    }
+
+    // ==================== 初始化 ====================
     window.onload = () => {
         loadData();
         render();
@@ -482,266 +991,28 @@
                 saveToCloud();
             }
         }, 5 * 60 * 1000);
-   // ==================== 历史记录功能 ====================
-const HISTORY_KEY = 'salary_history';
-
-// 获取历史记录
-function getHistory() {
-    const history = localStorage.getItem(HISTORY_KEY);
-    return history ? JSON.parse(history) : {};
-}
-
-// 保存当前月份到历史
-function saveMonthlyHistory() {
-    if (!checkPermission()) {
-        alert("需要管理员权限 / Requiere Admin");
-        return;
-    }
-    
-    // 计算当前汇总数据
-    let totalBase = 0, totalExtras = 0, totalBonos = 0, totalAll = 0;
-    const monthData = [];
-    
-    employees.forEach(emp => {
-        let eBase = 0, eExtras = 0, eBonos = 0;
-        
-        for(let d=0; d<emp.days; d++) {
-            const rec = emp.records[d] || { s:'', e:'', off:false, abs:false, b:0 };
-            
-            if (rec.abs) {
-                eBonos += parseFloat(rec.b || 0);
-            } else if (rec.off) {
-                eBase += parseFloat(emp.dailyRate);
-                eBonos += parseFloat(rec.b || 0);
-            } else {
-                eBase += parseFloat(emp.dailyRate);
-                if (rec.s && rec.e) {
-                    const wh = calculateHours(rec.s, rec.e);
-                    const oh = Math.max(0, wh - 9);
-                    eExtras += (oh * parseFloat(emp.otRate));
-                }
-                eBonos += parseFloat(rec.b || 0);
-            }
-        }
-        
-        const total = eBase + eExtras + eBonos;
-        totalBase += eBase;
-        totalExtras += eExtras;
-        totalBonos += eBonos;
-        totalAll += total;
-        
-        monthData.push({
-            name: emp.name,
-            base: eBase,
-            extras: eExtras,
-            bonos: eBonos,
-            total: total
-        });
-    });
-    
-    const now = new Date();
-    const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const monthName = `${now.getFullYear()}年${now.getMonth()+1}月`;
-    
-    const history = getHistory();
-    history[monthKey] = {
-        month: monthName,
-        date: now.toISOString(),
-        employees: monthData,
-        summary: {
-            base: totalBase,
-            extras: totalExtras,
-            bonos: totalBonos,
-            total: totalAll
-        }
     };
-    
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-    saveToCloud(); // 同步到云端
-    updateHistoryCards();
-    alert(`✅ 已保存 ${monthName} 的历史数据 / Historial guardado`);
-}
-
-// 显示历史记录模态框
-function showHistoryModal() {
-    // 创建模态框（如果不存在）
-    if (!document.getElementById('historyModal')) {
-        const modalHTML = `
-            <div id="historyModal" style="display:none; position:fixed; z-index:1001; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
-                <div style="background:white; padding:25px; border-radius:12px; width:600px; max-height:80vh; overflow-y:auto;">
-                    <h3 style="margin-top:0; color:#1976d2;">📊 历史薪资汇总 / Historial de Nómina</h3>
-                    <div style="margin-bottom:15px; display:flex; gap:10px;">
-                        <select id="historyMonthSelect" style="flex:2; padding:8px;" onchange="loadHistoryMonth()"></select>
-                        <button class="btn btn-danger" onclick="closeHistoryModal()" style="flex:1;">关闭 / Cerrar</button>
-                    </div>
-                    <div id="historyContent" style="border:1px solid #ddd; padding:15px; border-radius:8px;">
-                        <p style="text-align:center; color:#999;">请选择月份查看 / Seleccione un mes</p>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-    }
-    
-    const modal = document.getElementById('historyModal');
-    const select = document.getElementById('historyMonthSelect');
-    
-    const history = getHistory();
-    const months = Object.keys(history).sort().reverse();
-    
-    select.innerHTML = months.map(key => {
-        const h = history[key];
-        return `<option value="${key}">${h.month}</option>`;
-    }).join('');
-    
-    if (months.length > 0) {
-        loadHistoryMonth();
-    }
-    
-    modal.style.display = 'flex';
-}
-
-// 关闭历史记录模态框
-function closeHistoryModal() {
-    document.getElementById('historyModal').style.display = 'none';
-}
-
-// 加载选中的历史月份
-function loadHistoryMonth() {
-    const select = document.getElementById('historyMonthSelect');
-    const key = select.value;
-    if (!key) return;
-    
-    const history = getHistory();
-    const data = history[key];
-    if (!data) return;
-    
-    let html = `
-        <h4 style="margin-top:0; color:#b71c1c;">${data.month} 薪资汇总 / Resumen</h4>
-        <table style="width:100%; font-size:12px;">
-            <thead>
-                <tr style="background:#f5f5f5;">
-                    <th>员工 / Nombre</th><th>基本工资 / Base</th><th>加班费 / Extras</th><th>福利 / Bonos</th><th>合计 / Total</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-    
-    data.employees.forEach(emp => {
-        html += `<tr>
-            <td>${emp.name}</td>
-            <td>C$ ${emp.base.toFixed(2)}</td>
-            <td>C$ ${emp.extras.toFixed(2)}</td>
-            <td>C$ ${emp.bonos.toFixed(2)}</td>
-            <td style="font-weight:bold;">C$ ${emp.total.toFixed(2)}</td>
-        </tr>`;
-    });
-    
-    html += `
-            </tbody>
-            <tfoot>
-                <tr style="background:#fff9c4; font-weight:bold;">
-                    <td>合计 / Total</td>
-                    <td>C$ ${data.summary.base.toFixed(2)}</td>
-                    <td>C$ ${data.summary.extras.toFixed(2)}</td>
-                    <td>C$ ${data.summary.bonos.toFixed(2)}</td>
-                    <td style="color:#b71c1c;">C$ ${data.summary.total.toFixed(2)}</td>
-                </tr>
-            </tfoot>
-        </table>
-    `;
-    
-    document.getElementById('historyContent').innerHTML = html;
-}
-
-// 更新历史记录卡片
-function updateHistoryCards() {
-    // 创建卡片容器（如果不存在）
-    if (!document.getElementById('historyCards')) {
-        const cardsHTML = `
-            <div style="margin-top:20px; margin-bottom:20px;" class="no-print">
-                <h3 style="color:#1976d2;">📅 历史汇总 / Historial</h3>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:10px;" id="historyCards"></div>
-            </div>
-        `;
-        const summaryArea = document.querySelector('.summary-area');
-        if (summaryArea) {
-            summaryArea.insertAdjacentHTML('beforebegin', cardsHTML);
-        }
-    }
-    
-    const history = getHistory();
-    const cardsDiv = document.getElementById('historyCards');
-    if (!cardsDiv) return;
-    
-    const months = Object.keys(history).sort().reverse().slice(0, 6);
-    
-    if (months.length === 0) {
-        cardsDiv.innerHTML = '<div style="color:#999; text-align:center;">暂无历史数据 / Sin historial</div>';
+// 管理员直接修改时间
+function updateTime(empId, dayIdx, field, value) {
+    if (!isUnlocked) {
+        alert("只有管理员才能修改时间 / Solo Admin");
         return;
     }
     
-    cardsDiv.innerHTML = months.map(key => {
-        const h = history[key];
-        return `
-            <div style="background:#f5f5f5; padding:10px; border-radius:8px; text-align:center; cursor:pointer;" onclick="showHistoryMonth('${key}')">
-                <div style="font-weight:bold; color:#1976d2;">${h.month}</div>
-                <div style="font-size:18px; color:#b71c1c;">C$ ${h.summary.total.toFixed(0)}</div>
-            </div>
-        `;
-    }).join('');
-}
-
-// 显示特定月份的历史
-function showHistoryMonth(key) {
-    showHistoryModal();
-    const select = document.getElementById('historyMonthSelect');
-    if (select) {
-        select.value = key;
-        loadHistoryMonth();
+    const emp = employees.find(e => e.id === empId);
+    if (!emp) return;
+    if (!emp.records[dayIdx]) emp.records[dayIdx] = { s:'', e:'', off:false, abs:false, b:0 };
+    
+    // 验证时间格式 (HH:MM)
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (value && !timeRegex.test(value)) {
+        alert("时间格式错误 / Formato de hora incorrecto (HH:MM)");
+        return;
     }
-}
-
-// 在 render 函数最后调用 updateHistoryCards
-const originalRender = render;
-render = function() {
-    originalRender();
-    updateHistoryCards();
-};
-
-// 在按钮区域添加两个新按钮
-function addHistoryButtons() {
-    const btnGroup = document.querySelector('.btn-group');
-    if (btnGroup && !document.getElementById('historyBtnAdded')) {
-        const historyBtn1 = document.createElement('button');
-        historyBtn1.className = 'btn btn-primary';
-        historyBtn1.style.background = '#1976d2';
-        historyBtn1.innerHTML = '📅 保存本月历史 / Guardar Historial';
-        historyBtn1.onclick = saveMonthlyHistory;
-        
-        const historyBtn2 = document.createElement('button');
-        historyBtn2.className = 'btn btn-info';
-        historyBtn2.style.background = '#009688';
-        historyBtn2.innerHTML = '📊 查看历史记录 / Ver Historial';
-        historyBtn2.onclick = showHistoryModal;
-        
-        btnGroup.appendChild(historyBtn1);
-        btnGroup.appendChild(historyBtn2);
-        
-        // 添加标记避免重复添加
-        const marker = document.createElement('span');
-        marker.id = 'historyBtnAdded';
-        marker.style.display = 'none';
-        btnGroup.appendChild(marker);
-    }
-}
-
-// 在页面加载完成后添加按钮
-window.addEventListener('load', function() {
-    setTimeout(addHistoryButtons, 500);
-}); };
-</script>
+    
+    emp.records[dayIdx][field] = value;
+    saveData();
+    render();
+}</script>
 </body>
 </html>
-
-
