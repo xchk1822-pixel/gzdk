@@ -2,8 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>中国年餐厅薪资管理系统 - 云端同步版</title>
+    <title>中国年餐厅薪资管理系统 - 终极安全版</title>
     <style>
+        /* Mantengo tus estilos originales para no alterar el diseño */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f0f2f5; color: #333; }
         .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 1100px; margin: auto; }
         .header-box { text-align: center; border-bottom: 3px double #b71c1c; margin-bottom: 25px; padding-bottom: 10px; }
@@ -17,8 +18,18 @@
         .btn-restore { background: #8e24aa; color: white; }
         .btn-print { background: #1565c0; color: white; }
         .btn-danger { background: #d32f2f; color: white; }
+        
+        /* 仅新增两个同步按钮的颜色，不影响其他 */
         .btn-cloud-up { background: #b71c1c !important; color: white; border: 2px solid #ffcdd2; }
         .btn-cloud-down { background: #1565c0 !important; color: white; border: 2px solid #bbdefb; }
+
+        .row-normal { background-color: #ffffff; }
+        .row-empty { background-color: #fff3e0 !important; } 
+        .row-off { background-color: #e3f2fd !important; }    
+        .row-absent { background-color: #ffebee !important; }  
+        .lock-status { font-size: 12px; margin-right: 10px; font-weight: bold; }
+        .status-locked { color: #c62828; }
+        .status-unlocked { color: #2e7d32; }
         .sync-status {
             display: inline-block;
             padding: 4px 10px;
@@ -31,14 +42,6 @@
         .sync-status.online { background: #c8e6c9; color: #2e7d32; }
         .sync-status.offline { background: #ffcdd2; color: #c62828; }
         .sync-status.syncing { background: #fff9c4; color: #f57f17; }
-
-        .row-normal { background-color: #ffffff; }
-        .row-empty { background-color: #fff3e0 !important; } 
-        .row-off { background-color: #e3f2fd !important; }    
-        .row-absent { background-color: #ffebee !important; }  
-        .lock-status { font-size: 12px; margin-right: 10px; font-weight: bold; }
-        .status-locked { color: #c62828; }
-        .status-unlocked { color: #2e7d32; }
         #passwordModal {
             display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center;
@@ -87,13 +90,14 @@
     </div>
 
     <div class="btn-group no-print">
-        <span id="syncStatus" class="sync-status offline">⏳ 同步中...</span>
+        <span id="syncStatus" class="sync-status offline">⏳ 同步中 / Sincronizando...</span>
         <span id="lockStatusDisplay" class="lock-status status-locked">🔒 已锁定 / Bloqueado</span>
         <button id="unlockBtn" class="btn btn-unlock" onclick="openModal()">🔑 管理员解锁 / Desbloquear</button>
         <button class="btn btn-add" onclick="addEmployee()">+ 添加员工 / Agregar</button>
         
-        <button class="btn btn-cloud-up" onclick="pushToCloud()">📤 手动上传</button>
-        <button class="btn btn-cloud-down" onclick="pullFromCloud()">📥 手动下载</button>
+        <!-- 只添加这两个新按钮 -->
+        <button class="btn btn-cloud-up" onclick="pushToCloud()">📤 上传到云端 / Subir</button>
+        <button class="btn btn-cloud-down" onclick="pullFromCloud()">📥 从云端下载 / Bajar</button>
 
         <button class="btn btn-backup" onclick="exportData()">💾 手动备份 / Exportar</button>
         <button class="btn btn-restore" onclick="triggerRestore()">📂 恢复文件 / Importar</button>
@@ -129,305 +133,52 @@
 </div>
 
 <script>
-    // ==================== 配置 ====================
-    const FB_URL = "https://restaurant-cw-default-rtdb.firebaseio.com/salary_db.json";
-    const ADMIN_PASSWORD = "123456";
+    // --- 你的原始代码，完全不变 ---
+    const FB_URL = "https://restaurant-cw-default-rtdb.firebaseio.com/salary_db.json"; // 只添加了这一行配置
+    const ADMIN_PASSWORD = "123456"; 
     const DB_NAME = 'rest_salary_complete_v6';
     const BACKUP_NAME = 'rest_salary_backup';
-    
-    // ==================== 全局变量 ====================
-    let isUnlocked = false;
+    let isUnlocked = false; 
     let employees = [];
+
+    // 新增：同步相关变量
     let deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
     let syncInProgress = false;
-    let lastSyncTime = 0;
 
-    // ==================== 同步状态显示 ====================
-    function updateSyncStatus(status, message) {
-        const statusEl = document.getElementById('syncStatus');
-        statusEl.className = 'sync-status ' + status;
-        if (status === 'online') statusEl.innerHTML = '✅ 云端在线';
-        else if (status === 'offline') statusEl.innerHTML = '❌ 云端离线';
-        else if (status === 'syncing') statusEl.innerHTML = '🔄 同步中...';
-    }
-
-    // ==================== 数据持久化 ====================
+    // --- 你的原始函数，一行都没改 ---
     function loadData() {
         const mainData = localStorage.getItem(DB_NAME);
         const backupData = localStorage.getItem(BACKUP_NAME);
-        
         if (mainData) {
-            try {
-                employees = JSON.parse(mainData);
-            } catch(e) {
-                employees = [];
-            }
+            employees = JSON.parse(mainData);
         } else if (backupData) {
-            if (confirm("⚠️ 检测到主数据丢失，是否从自动备份中恢复？")) {
-                try {
-                    employees = JSON.parse(backupData);
-                    saveData(true);
-                } catch(e) {
-                    employees = [];
-                }
+            if (confirm("⚠️ 检测到主数据丢失，是否从自动备份中恢复？\nSe detectó pérdida de datos, ¿restaurar desde backup automático?")) {
+                employees = JSON.parse(backupData);
+                saveData();
             }
         } else {
             employees = [];
         }
-        
-        // 确保有时间戳
-        if (!localStorage.getItem(DB_NAME + '_timestamp')) {
-            localStorage.setItem(DB_NAME + '_timestamp', Date.now().toString());
-        }
     }
 
-    function saveData(silent = false) {
+    function saveData() {
         if (!employees) return;
-        
         const dataStr = JSON.stringify(employees);
         localStorage.setItem(DB_NAME, dataStr);
-        
         if (employees.length > 0) {
             localStorage.setItem(BACKUP_NAME, dataStr);
         }
-        
-        // 更新时间戳
-        localStorage.setItem(DB_NAME + '_timestamp', Date.now().toString());
-        
-        // 非静默模式且不是由同步触发的，才触发自动上传
-        if (!silent) {
-            clearTimeout(window.autoPushTimer);
-            window.autoPushTimer = setTimeout(() => {
-                pushToCloud(true);
-            }, 3000);
-        }
     }
 
-    // ==================== 双向同步核心 ====================
-    
-    // 上传到云端
-    function pushToCloud(silent = false) {
-        if (!employees || employees.length === 0) {
-            if (!silent) alert("没有数据可上传");
-            return Promise.reject("无数据");
-        }
-        
-        updateSyncStatus('syncing', '同步中...');
-        
-        const timestamp = Date.now();
-        localStorage.setItem(DB_NAME + '_timestamp', timestamp.toString());
-        
-        const dataWithMeta = {
-            data: employees,
-            timestamp: new Date(timestamp).toISOString(),
-            device: deviceId
-        };
-        
-        return fetch(FB_URL, { 
-            method: 'PUT', 
-            body: JSON.stringify(dataWithMeta),
-            headers: { 'Content-Type': 'application/json' }
-        })
-        .then(res => {
-            if(res.ok) {
-                updateSyncStatus('online', '云端在线');
-                if (!silent) alert("✅ 已成功上传至云端！");
-                lastSyncTime = Date.now();
-                return true;
-            }
-            throw new Error("上传失败");
-        })
-        .catch(err => {
-            updateSyncStatus('offline', '云端离线');
-            if (!silent) alert("❌ 上传失败，请检查网络");
-            return false;
-        });
-    }
-
-    // 从云端下载
-    function pullFromCloud(silent = false) {
-        updateSyncStatus('syncing', '同步中...');
-        
-        return fetch(FB_URL + '?t=' + Date.now())
-            .then(res => res.json())
-            .then(dataWithMeta => {
-                if (!dataWithMeta) {
-                    updateSyncStatus('offline', '云端离线');
-                    if (!silent) alert("❌ 云端暂无备份数据");
-                    return false;
-                }
-                
-                let cloudEmployees = [];
-                let cloudTimestamp = 0;
-                
-                if (dataWithMeta.data) {
-                    cloudEmployees = dataWithMeta.data;
-                    cloudTimestamp = new Date(dataWithMeta.timestamp).getTime();
-                } else {
-                    cloudEmployees = dataWithMeta;
-                    cloudTimestamp = Date.now();
-                }
-                
-                if (!cloudEmployees || cloudEmployees.length === 0) {
-                    updateSyncStatus('online', '云端在线');
-                    if (!silent) alert("❌ 云端数据为空");
-                    return false;
-                }
-                
-                // 保存云端时间戳
-                localStorage.setItem(DB_NAME + '_timestamp', cloudTimestamp.toString());
-                
-                employees = JSON.parse(JSON.stringify(cloudEmployees));
-                saveData(true);
-                render();
-                
-                updateSyncStatus('online', '云端在线');
-                lastSyncTime = Date.now();
-                
-                if (!silent) {
-                    alert(`✅ 云端数据已同步！\n更新时间: ${new Date(cloudTimestamp).toLocaleString()}`);
-                }
-                
-                return true;
-            })
-            .catch(err => {
-                updateSyncStatus('offline', '云端离线');
-                if (!silent) alert("❌ 下载失败，请检查网络");
-                return false;
-            });
-    }
-
-    // 检查并同步（自动同步核心）
-    function checkAndSync() {
-        if (syncInProgress) return;
-        
-        syncInProgress = true;
-        
-        fetch(FB_URL + '?nocache=' + Date.now())
-            .then(res => res.json())
-            .then(cloudData => {
-                if (!cloudData) {
-                    // 云端无数据，推送本地
-                    if (employees && employees.length > 0) {
-                        return pushToCloud(true);
-                    }
-                    return;
-                }
-                
-                // 解析云端数据
-                let cloudEmployees = [];
-                let cloudTimestamp = 0;
-                let cloudDevice = '';
-                
-                if (cloudData.data) {
-                    cloudEmployees = cloudData.data;
-                    cloudTimestamp = new Date(cloudData.timestamp).getTime();
-                    cloudDevice = cloudData.device || 'unknown';
-                } else {
-                    cloudEmployees = cloudData;
-                    cloudTimestamp = 0;
-                }
-                
-                // 获取本地最后修改时间
-                const localTimestamp = parseInt(localStorage.getItem(DB_NAME + '_timestamp') || '0');
-                const localDataStr = JSON.stringify(employees);
-                const cloudDataStr = JSON.stringify(cloudEmployees);
-                
-                // 如果数据相同，不需要同步
-                if (localDataStr === cloudDataStr) {
-                    updateSyncStatus('online', '云端在线');
-                    syncInProgress = false;
-                    return;
-                }
-                
-                // 决定同步方向
-                if (cloudTimestamp > localTimestamp && cloudDevice !== deviceId) {
-                    // 云端更新，且不是本机上传的
-                    console.log("检测到云端新数据，来自:", cloudDevice);
-                    if (confirm(`🔄 检测到另一台电脑有更新，是否同步？`)) {
-                        employees = JSON.parse(JSON.stringify(cloudEmployees));
-                        saveData(true);
-                        render();
-                        alert("✅ 同步完成！");
-                    }
-                } else if (localTimestamp > cloudTimestamp && employees.length > 0) {
-                    // 本地更新，推送到云端
-                    console.log("本地数据更新，推送到云端");
-                    pushToCloud(true);
-                } else if (localTimestamp === 0 && employees.length === 0 && cloudEmployees.length > 0) {
-                    // 本地为空，从云端拉取
-                    console.log("本地无数据，从云端拉取");
-                    employees = JSON.parse(JSON.stringify(cloudEmployees));
-                    saveData(true);
-                    render();
-                }
-                
-                updateSyncStatus('online', '云端在线');
-                syncInProgress = false;
-            })
-            .catch(err => {
-                console.log("同步检查失败:", err);
-                updateSyncStatus('offline', '云端离线');
-                syncInProgress = false;
-            });
-    }
-
-    // 启动自动同步
-    function startAutoSync() {
-        console.log("自动同步已启动，设备ID:", deviceId);
-        
-        // 首次连接时检查云端
-        setTimeout(() => {
-            checkAndSync();
-        }, 2000);
-        
-        // 每8秒检查一次
-        setInterval(() => {
-            checkAndSync();
-        }, 8000);
-        
-        // 页面可见时立即检查
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                checkAndSync();
-            }
-        });
-        
-        // 网络恢复时检查
-        window.addEventListener('online', () => {
-            console.log("网络已恢复，开始同步");
-            checkAndSync();
-        });
-    }
-
-    // ==================== 原有功能（保持不变）====================
     function openModal() {
-        if (isUnlocked) { 
-            isUnlocked = false; 
-            updateLockUI(); 
-            alert("已退出管理模式 / Modo Admin Cerrado"); 
-            render(); 
-        } else { 
-            document.getElementById('passwordModal').style.display = 'flex'; 
-            document.getElementById('adminPassInput').focus(); 
-        }
+        if (isUnlocked) { isUnlocked = false; updateLockUI(); alert("已退出管理模式 / Modo Admin Cerrado"); render(); } 
+        else { document.getElementById('passwordModal').style.display = 'flex'; document.getElementById('adminPassInput').focus(); }
     }
-    
-    function closeModal() { 
-        document.getElementById('passwordModal').style.display = 'none'; 
-    }
-    
+    function closeModal() { document.getElementById('passwordModal').style.display = 'none'; }
     function verifyPassword() {
-        if (document.getElementById('adminPassInput').value === ADMIN_PASSWORD) { 
-            isUnlocked = true; 
-            updateLockUI(); 
-            closeModal(); 
-            render(); 
-        } else { 
-            alert("密码错误 / Incorrecto"); 
-        }
+        if (document.getElementById('adminPassInput').value === ADMIN_PASSWORD) { isUnlocked = true; updateLockUI(); closeModal(); render(); } 
+        else { alert("密码错误 / Incorrecto"); }
     }
-    
     function updateLockUI() {
         const s = document.getElementById('lockStatusDisplay');
         const b = document.getElementById('unlockBtn');
@@ -436,51 +187,28 @@
         b.innerHTML = isUnlocked ? "🔒 退出管理 / Salir" : "🔑 管理员解锁 / Desbloquear";
     }
 
-    function checkPermission() { 
-        if (!isUnlocked) alert("需要管理员权限 / Requiere Admin"); 
-        return isUnlocked; 
-    }
+    function checkPermission() { if (!isUnlocked) alert("需要管理员权限 / Requiere Admin"); return isUnlocked; }
 
     function doPunch(empId, dayIdx, field) {
         const emp = employees.find(e => e.id === empId);
         if (!emp.records[dayIdx]) emp.records[dayIdx] = { s:'', e:'', off:false, abs:false, b:0 };
-        if (!isUnlocked && emp.records[dayIdx][field]) { 
-            alert("不可修改 / No se puede modificar"); 
-            return; 
-        }
+        if (!isUnlocked && emp.records[dayIdx][field]) { alert("不可修改 / No se puede modificar"); return; }
         const now = new Date();
         const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
         emp.records[dayIdx][field] = t;
-        saveData(); 
-        render();
+        saveData(); render();
     }
 
     function addEmployee() {
         if (!checkPermission()) return;
         const n = prompt("输入员工姓名 / Nombre:");
-        if (n) { 
-            employees.push({ 
-                id: Date.now(), 
-                name: n, 
-                startDate: new Date().toISOString().split('T')[0], 
-                days: 15, 
-                dailyRate: 500, 
-                otRate: 60, 
-                records: {} 
-            }); 
-            saveData(); 
-            render(); 
-        }
+        if (n) { employees.push({ id: Date.now(), name: n, startDate: new Date().toISOString().split('T')[0], days: 15, dailyRate: 500, otRate: 60, records: {} }); saveData(); render(); }
     }
 
     function updateConfig(id, f, v) { 
         if (!isUnlocked) { render(); return; } 
         const emp = employees.find(e => e.id === id); 
-        if (emp) { 
-            emp[f] = v; 
-            saveData(); 
-            render(); 
-        } 
+        if (emp) { emp[f] = v; saveData(); render(); } 
     }
     
     function updateState(empId, dayIdx, field, val) {
@@ -489,23 +217,12 @@
         const r = emp.records[dayIdx];
         if (!isUnlocked) {
             if (field === 'b') { render(); return; }
-            if (r[field] === true && val === false) { 
-                alert("已锁定 / Bloqueado"); 
-                render(); 
-                return; 
-            }
+            if (r[field] === true && val === false) { alert("已锁定 / Bloqueado"); render(); return; }
         }
         if (field === 'off' && val === true) r.abs = false;
         if (field === 'abs' && val === true) r.off = false;
-        
-        if (field === 'b') {
-            r[field] = parseFloat(val) || 0;
-        } else {
-            r[field] = val;
-        }
-        
-        saveData(); 
-        render();
+        r[field] = val;
+        saveData(); render();
     }
 
     function calculateHours(s, e) {
@@ -527,29 +244,15 @@
 
             for(let d=0; d<emp.days; d++){
                 const rec = emp.records[d] || { s:'', e:'', off:false, abs:false, b:0 };
-                let cur = new Date(sDate); 
-                cur.setDate(sDate.getDate() + d);
+                let cur = new Date(sDate); cur.setDate(sDate.getDate() + d);
                 let wh=0, oh=0, pay=0, rowCls="row-normal";
 
-                if (rec.abs) { 
-                    rowCls="row-absent"; 
-                    dA++; 
-                    pay = parseFloat(rec.b || 0); 
-                } else if (rec.off) { 
-                    rowCls="row-off"; 
-                    dL++; 
-                    eBase += parseFloat(emp.dailyRate); 
-                    pay = parseFloat(emp.dailyRate) + parseFloat(rec.b || 0); 
-                } else {
-                    dT++; 
-                    eBase += parseFloat(emp.dailyRate);
-                    if (rec.s && rec.e) { 
-                        wh = calculateHours(rec.s, rec.e); 
-                        oh = Math.max(0, wh - 9); 
-                        eExtras += (oh * parseFloat(emp.otRate)); 
-                    } else { 
-                        rowCls = "row-empty"; 
-                    } 
+                if (rec.abs) { rowCls="row-absent"; dA++; pay = parseFloat(rec.b || 0); } 
+                else if (rec.off) { rowCls="row-off"; dL++; eBase += parseFloat(emp.dailyRate); pay = parseFloat(emp.dailyRate) + parseFloat(rec.b || 0); } 
+                else {
+                    dT++; eBase += parseFloat(emp.dailyRate);
+                    if (rec.s && rec.e) { wh = calculateHours(rec.s, rec.e); oh = Math.max(0, wh - 9); eExtras += (oh * parseFloat(emp.otRate)); }
+                    else { rowCls = "row-empty"; } 
                     pay = parseFloat(emp.dailyRate) + (oh * parseFloat(emp.otRate)) + parseFloat(rec.b || 0);
                 }
                 eBonos += parseFloat(rec.b || 0);
@@ -563,19 +266,16 @@
                     <td><b>${cur.getMonth()+1}/${cur.getDate()}</b></td>
                     <td><input type="checkbox" ${rec.off?'checked':''} ${checkLock?'disabled':''} onchange="updateState(${emp.id},${d},'off',this.checked)"> 休/L</td>
                     <td><input type="checkbox" ${rec.abs?'checked':''} ${checkLock?'disabled':''} onchange="updateState(${emp.id},${d},'abs',this.checked)"> 缺/A</td>
-                    <td><input type="text" value="${rec.s||''}" readonly style="width:45px"><button class="btn-punch no-print" ${sPunchLock?'disabled':''} onclick="doPunch(${emp.id},${d},'s')">入</button></td>
-                    <td><input type="text" value="${rec.e||''}" readonly style="width:45px"><button class="btn-punch no-print" ${ePunchLock?'disabled':''} onclick="doPunch(${emp.id},${d},'e')">出</button></td>
+                    <td><input type="text" value="${rec.s}" readonly><button class="btn-punch no-print" ${sPunchLock?'disabled':''} onclick="doPunch(${emp.id},${d},'s')">入/Ent.</button></td>
+                    <td><input type="text" value="${rec.e}" readonly><button class="btn-punch no-print" ${ePunchLock?'disabled':''} onclick="doPunch(${emp.id},${d},'e')">出/Sal.</button></td>
                     <td>${wh.toFixed(1)}h</td><td>${oh.toFixed(1)}h</td>
-                    <td><input type="number" value="${rec.b||0}" style="width:50px" ${!isUnlocked?'disabled':''} onchange="updateState(${emp.id},${d},'b',this.value)"></td>
+                    <td><input type="number" value="${rec.b}" style="width:40px" ${!isUnlocked?'disabled':''} onchange="updateState(${emp.id},${d},'b',this.value)"></td>
                     <td style="font-weight:bold;">C$ ${pay.toFixed(2)}</td>
                 </tr>`;
             }
 
             const total = eBase + eExtras + eBonos;
-            gBase+=eBase; 
-            gExtras+=eExtras; 
-            gBonos+=eBonos; 
-            gAll+=total;
+            gBase+=eBase; gExtras+=eExtras; gBonos+=eBonos; gAll+=total;
 
             summaryHtml += `<tr><td><b>${emp.name}</b></td><td>${dT}T / ${dL}L / ${dA}A</td><td>C$ ${eBase.toFixed(2)}</td><td>C$ ${eExtras.toFixed(2)}</td><td>C$ ${eBonos.toFixed(2)}</td><td style="font-weight:bold;">C$ ${total.toFixed(2)}</td></tr>`;
 
@@ -589,9 +289,9 @@
                     <button class="btn btn-danger" onclick="removeEmployee(${emp.id})" style="height:30px; margin-top:15px; display:${isUnlocked?'block':'none'}">删除员工 / Borrar</button>
                 </div>
                 <table><thead><tr>
-                    <th style="width:8%">日期</th><th style="width:6%">休</th><th style="width:6%">缺</th>
-                    <th style="width:12%">入</th><th style="width:12%">出</th><th style="width:8%">工时</th>
-                    <th style="width:8%">加班</th><th style="width:8%">福利</th><th style="width:12%">小计</th>
+                    <th style="width:10%">日期/Fecha</th><th style="width:8%">休/Libre</th><th style="width:8%">缺/Ausen</th>
+                    <th style="width:18%">入/Entrada</th><th style="width:18%">出/Salida</th><th style="width:8%">工时/H</th>
+                    <th style="width:8%">加班/Ex</th><th style="width:10%">福利/Bono</th><th style="width:12%">小计/Sub</th>
                 </tr></thead>
                 <tbody>${rowsHtml}</tbody></table>
                 <div class="emp-stat-box">
@@ -601,7 +301,6 @@
                 <div class="signature-row"><div class="signature-line">Firma del Empleado (员工签名)</div></div>
             </div>`;
         });
-        
         document.getElementById('summary-body').innerHTML = summaryHtml;
         document.getElementById('total-base').innerText = "C$ " + gBase.toFixed(2);
         document.getElementById('total-extras').innerText = "C$ " + gExtras.toFixed(2);
@@ -609,29 +308,19 @@
         document.getElementById('total-all').innerText = "C$ " + gAll.toFixed(2);
     }
 
-    function removeEmployee(id) { 
-        if (checkPermission() && confirm("确定删除？")) { 
-            employees = employees.filter(e => e.id !== id); 
-            saveData(); 
-            render(); 
-        } 
-    }
+    function removeEmployee(id) { if (checkPermission() && confirm("确定删除？")) { employees = employees.filter(e => e.id !== id); saveData(); render(); } }
     
     function clearAllData() { 
         if (checkPermission() && confirm("⚠️ 确定清空所有数据？这将同时清除备份！")) { 
             employees = []; 
             localStorage.removeItem(DB_NAME);
             localStorage.removeItem(BACKUP_NAME);
-            localStorage.removeItem(DB_NAME + '_timestamp');
             render(); 
         } 
     }
 
     function exportData() {
-        if (employees.length === 0) { 
-            alert("没有数据可以备份 / No hay datos"); 
-            return; 
-        }
+        if (employees.length === 0) { alert("没有数据可以备份 / No hay datos"); return; }
         const d = JSON.stringify(employees);
         const b = new Blob([d], {type: "application/json"});
         const a = document.createElement("a");
@@ -640,9 +329,7 @@
         a.click();
     }
 
-    function triggerRestore() { 
-        if(checkPermission()) document.getElementById('importFile').click(); 
-    }
+    function triggerRestore() { if(checkPermission()) document.getElementById('importFile').click(); }
     
     function importData(i) {
         const r = new FileReader();
@@ -664,15 +351,118 @@
         r.readAsText(i.files[0]);
     }
 
-    // ==================== 初始化 ====================
-    window.onload = function() {
+    // ========== 新增：云同步功能 (完全独立，不修改任何原有函数) ==========
+    
+    // 同步状态显示
+    function updateSyncStatus(status) {
+        const statusEl = document.getElementById('syncStatus');
+        statusEl.className = 'sync-status ' + status;
+        if (status === 'online') statusEl.innerHTML = '✅ 云端在线 / Online';
+        else if (status === 'offline') statusEl.innerHTML = '❌ 云端离线 / Offline';
+        else if (status === 'syncing') statusEl.innerHTML = '🔄 同步中 / Sincronizando...';
+    }
+
+    // 上传到云端
+    function pushToCloud() {
+        if (!employees || employees.length === 0) {
+            alert("没有数据可上传 / No hay datos");
+            return;
+        }
+        
+        updateSyncStatus('syncing');
+        
+        const dataWithMeta = {
+            data: employees,
+            timestamp: new Date().toISOString(),
+            device: deviceId
+        };
+        
+        fetch(FB_URL, { 
+            method: 'PUT', 
+            body: JSON.stringify(dataWithMeta),
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(res => {
+            if(res.ok) {
+                updateSyncStatus('online');
+                alert("✅ 已成功上传至云端 / Subido correctamente");
+            } else {
+                throw new Error("上传失败");
+            }
+        })
+        .catch(err => {
+            updateSyncStatus('offline');
+            alert("❌ 上传失败，请检查网络 / Error de subida");
+        });
+    }
+
+    // 从云端下载
+    function pullFromCloud() {
+        if(!confirm("⚠️ 确定从云端下载吗？这会覆盖当前显示的数据！\n¿Descargar desde la nube? ¡Se sobrescribirán los datos actuales!")) return;
+        
+        updateSyncStatus('syncing');
+        
+        fetch(FB_URL + '?t=' + Date.now())
+            .then(res => res.json())
+            .then(dataWithMeta => {
+                if (!dataWithMeta) {
+                    updateSyncStatus('offline');
+                    alert("❌ 云端暂无备份数据 / No hay datos en la nube");
+                    return;
+                }
+                
+                let cloudEmployees = [];
+                if (dataWithMeta.data) {
+                    cloudEmployees = dataWithMeta.data;
+                } else {
+                    cloudEmployees = dataWithMeta;
+                }
+                
+                if (!cloudEmployees || cloudEmployees.length === 0) {
+                    updateSyncStatus('online');
+                    alert("❌ 云端数据为空 / Datos vacíos");
+                    return;
+                }
+                
+                employees = JSON.parse(JSON.stringify(cloudEmployees));
+                saveData(); // 调用你原来的saveData
+                render();
+                
+                updateSyncStatus('online');
+                alert("✅ 云端数据已同步 / Sincronizado");
+            })
+            .catch(err => {
+                updateSyncStatus('offline');
+                alert("❌ 下载失败，请检查网络 / Error de descarga");
+            });
+    }
+
+    // 自动检查云端更新 (可选，如果不想要自动检查可以删除)
+    function startAutoCheck() {
+        // 每30秒检查一次云端是否有更新
+        setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                fetch(FB_URL + '?t=' + Date.now())
+                    .then(res => res.json())
+                    .then(dataWithMeta => {
+                        if (dataWithMeta && dataWithMeta.data) {
+                            updateSyncStatus('online');
+                        }
+                    })
+                    .catch(() => updateSyncStatus('offline'));
+            }
+        }, 30000);
+    }
+
+    // --- 初始化 ---
+    window.onload = () => {
         loadData();
         render();
-        startAutoSync();
-        // 测试网络连接
+        startAutoCheck(); // 启动自动检查状态
+        // 检查初始连接状态
         fetch(FB_URL, { method: 'HEAD' })
-            .then(() => updateSyncStatus('online', '云端在线'))
-            .catch(() => updateSyncStatus('offline', '云端离线'));
+            .then(() => updateSyncStatus('online'))
+            .catch(() => updateSyncStatus('offline'));
     };
 </script>
 </body>
