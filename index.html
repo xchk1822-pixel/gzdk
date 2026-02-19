@@ -395,35 +395,48 @@
         } 
     }
 
-    // ==================== 添加员工（只有管理员）====================
-    // ==================== 添加员工（只有管理员）====================
+ // ==================== 添加员工（只有管理员）====================
 function addEmployee() {
+    console.log("添加员工按钮被点击");
+    console.log("当前解锁状态:", isUnlocked);
+    
     if (!isUnlocked) {
         alert("需要管理员权限 / Requiere Admin");
         return;
     }
+    
     const n = prompt("输入员工姓名 / Nombre:");
-    if (n) { 
-        // 创建一个新员工对象，确保字段名和原有代码完全一致
+    console.log("输入的姓名:", n);
+    
+    if (n && n.trim() !== "") { 
+        // 创建一个新员工对象
         const newEmp = { 
-            id: Date.now(),           // 数字类型的ID
-            name: n,                   // 员工姓名
-            startDate: new Date().toISOString().split('T')[0], 
-            days: 15, 
-            dailyRate: 500, 
-            otRate: 60, 
-            records: {}                // 打卡记录
+            id: Date.now(),
+            name: n.trim(),
+            startDate: new Date().toISOString().split('T')[0],
+            days: 15,
+            dailyRate: 500,
+            otRate: 60,
+            records: {}
         }; 
         
+        console.log("创建的新员工对象:", newEmp);
+        
         // 添加到数组
-        employees.push(newEmp); 
+        employees.push(newEmp);
+        console.log("添加后的员工数组长度:", employees.length);
         
-        // 保存数据并刷新显示
-        saveData(); 
-        render(); 
+        // 强制保存并刷新
+        localStorage.setItem(DB_NAME, JSON.stringify(employees));
+        saveToCloud();
         
-        // 调试信息（可在控制台查看）
-        console.log("员工添加成功:", newEmp);
+        // 重新渲染页面
+        render();
+        
+        console.log("页面已重新渲染");
+        alert("✅ 员工添加成功 / Empleado agregado");
+    } else {
+        alert("姓名不能为空 / Nombre no puede estar vacío");
     }
 }
 
@@ -772,4 +785,5 @@ function addEmployee() {
 </script>
 </body>
 </html>
+
 
