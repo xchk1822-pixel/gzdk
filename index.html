@@ -151,11 +151,11 @@
     };
 
     // ==================== 全局变量 ====================
-    const ADMIN_PASSWORD = "123456";  // 唯一的管理员密码
+    const ADMIN_PASSWORD = "123456";
     const DB_NAME = 'rest_salary_complete_v6';
     const BACKUP_NAME = 'rest_salary_backup';
     const HISTORY_KEY = 'salary_history';
-    const CLOUD_COLLECTION = 'salaryData';  // 和财务系统分开
+    const CLOUD_COLLECTION = 'salaryData';
     
     let isUnlocked = false; 
     let employees = [];
@@ -272,33 +272,25 @@
         }
     }
 
-    // ==================== 原有数据函数 ====================
+    // ==================== 数据加载和保存 ====================
     function loadData() {
-        const mainData = localStorage.getItem(DB_NAME);
-        const backupData = localStorage.getItem(BACKUP_NAME);
-
-        if (mainData) {
-            employees = JSON.parse(mainData);
-        } else if (backupData) {
-            if (confirm("⚠️ 检测到主数据丢失，是否从自动备份中恢复？\n¿Restaurar desde backup?")) {
-                employees = JSON.parse(backupData);
-                saveData();
+        try {
+            const saved = localStorage.getItem(DB_NAME);
+            if (saved) {
+                employees = JSON.parse(saved);
+            } else {
+                employees = [];
             }
-        } else {
+        } catch (e) {
             employees = [];
         }
     }
 
     function saveData() {
-        if (!employees) return;
-        const dataStr = JSON.stringify(employees);
-        
-        localStorage.setItem(DB_NAME, dataStr);
-        
+        localStorage.setItem(DB_NAME, JSON.stringify(employees));
         if (employees.length > 0) {
-            localStorage.setItem(BACKUP_NAME, dataStr);
+            localStorage.setItem(BACKUP_NAME, JSON.stringify(employees));
         }
-        
         saveToCloud();
     }
 
@@ -338,109 +330,51 @@
         b.innerHTML = isUnlocked ? "🔒 退出管理 / Salir" : "🔑 管理员解锁 / Desbloquear";
     }
 
-    // ==================== 打卡功能（员工可用，不需要解锁）====================
-    function doPunch(empId, dayIdx, field) {
-        const emp = employees.find(e => e.id === empId);
-        if (!emp) return;
-        if (!emp.records[dayIdx]) emp.records[dayIdx] = { s:'', e:'', off:false, abs:false, b:0 };
-        
-        // 检查是否可以打卡：如果已经打过卡了就不能再改
-        if (emp.records[dayIdx][field]) { 
-            alert("该时段已打卡，不能重复修改 / Ya registrado"); 
-            return; 
+    // ==================== 添加员工（修复版）====================
+    function addEmployee() {
+        // 先检查是否解锁
+        if (!isUnlocked) {
+            alert("请先点击「管理员解锁」输入密码 123456");
+            return;
         }
         
-        const now = new Date();
-        const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-        emp.records[dayIdx][field] = t;
-        saveData(); 
-        render();
-    }
-
-    // ==================== 修改状态（只有管理员能改休/缺/福利）====================
-    function updateState(empId, dayIdx, field, val) {
-        const emp = employees.find(e => e.id === empId);
-        if (!emp) return;
-        if (!emp.records[dayIdx]) emp.records[dayIdx] = { s:'', e:'', off:false, abs:false, b:0 };
-        const r = emp.records[dayIdx];
-
-        // 只有管理员才能修改休/缺/福利
-        if (field === 'off' || field === 'abs' || field === 'b') {
-            if (!isUnlocked) {
-                alert("只有管理员才能修改休/缺/福利 / Solo Admin");
-                render();
-                return;
-            }
+        // 弹出输入框
+        const name = prompt("输入员工姓名:", "");
+        if (!name || name.trim() === "") {
+            alert("姓名不能为空");
+            return;
         }
-
-        if (field === 'off' && val === true) r.abs = false;
-        if (field === 'abs' && val === true) r.off = false;
-        r[field] = field === 'b' ? parseFloat(val) : val;
-        saveData(); 
-        render();
-    }
-
-    // ==================== 修改配置（只有管理员）====================
-    function updateConfig(id, f, v) { 
-        if (!isUnlocked) { 
-            alert("只有管理员才能修改配置 / Solo Admin");
-            render(); 
-            return; 
-        } 
-        const emp = employees.find(e => e.id === id); 
-        if (emp) { 
-            emp[f] = f === 'days' || f === 'dailyRate' || f === 'otRate' ? parseFloat(v) : v; 
-            saveData(); 
-            render(); 
-        } 
-    }
-
- // ==================== 添加员工（只有管理员）====================
-function addEmployee() {
-    console.log("添加员工按钮被点击");
-    console.log("当前解锁状态:", isUnlocked);
-    
-    if (!isUnlocked) {
-        alert("需要管理员权限 / Requiere Admin");
-        return;
-    }
-    
-    const n = prompt("输入员工姓名 / Nombre:");
-    console.log("输入的姓名:", n);
-    
-    if (n && n.trim() !== "") { 
-        // 创建一个新员工对象
-        const newEmp = { 
+        
+        // 创建新员工对象
+        const newEmployee = {
             id: Date.now(),
-            name: n.trim(),
+            name: name.trim(),
             startDate: new Date().toISOString().split('T')[0],
             days: 15,
             dailyRate: 500,
             otRate: 60,
             records: {}
-        }; 
-        
-        console.log("创建的新员工对象:", newEmp);
+        };
         
         // 添加到数组
-        employees.push(newEmp);
-        console.log("添加后的员工数组长度:", employees.length);
+        employees.push(newEmployee);
         
-        // 强制保存并刷新
+        // 保存到本地
         localStorage.setItem(DB_NAME, JSON.stringify(employees));
-        saveToCloud();
+        
+        // 保存到云端（如果已连接）
+        if (firebaseLoaded) {
+            saveToCloud();
+        }
         
         // 重新渲染页面
         render();
         
-        console.log("页面已重新渲染");
-        alert("✅ 员工添加成功 / Empleado agregado");
-    } else {
-        alert("姓名不能为空 / Nombre no puede estar vacío");
+        // 提示成功
+        alert("✅ 员工 " + name.trim() + " 添加成功");
     }
-}
 
-    // ==================== 删除员工（只有管理员）====================
+    // ==================== 删除员工 ====================
     function removeEmployee(id) { 
         if (!isUnlocked) {
             alert("只有管理员才能删除员工 / Solo Admin");
@@ -453,7 +387,62 @@ function addEmployee() {
         } 
     }
 
-    // ==================== 历史记录功能 ====================
+    // ==================== 打卡功能 ====================
+    function doPunch(empId, dayIdx, field) {
+        const emp = employees.find(e => e.id === empId);
+        if (!emp) return;
+        if (!emp.records[dayIdx]) emp.records[dayIdx] = { s:'', e:'', off:false, abs:false, b:0 };
+        
+        if (emp.records[dayIdx][field]) { 
+            alert("该时段已打卡 / Ya registrado"); 
+            return; 
+        }
+        
+        const now = new Date();
+        const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        emp.records[dayIdx][field] = t;
+        saveData(); 
+        render();
+    }
+
+    // ==================== 修改状态 ====================
+    function updateState(empId, dayIdx, field, val) {
+        const emp = employees.find(e => e.id === empId);
+        if (!emp) return;
+        if (!emp.records[dayIdx]) emp.records[dayIdx] = { s:'', e:'', off:false, abs:false, b:0 };
+        const r = emp.records[dayIdx];
+
+        if (field === 'off' || field === 'abs' || field === 'b') {
+            if (!isUnlocked) {
+                alert("只有管理员才能修改 / Solo Admin");
+                render();
+                return;
+            }
+        }
+
+        if (field === 'off' && val === true) r.abs = false;
+        if (field === 'abs' && val === true) r.off = false;
+        r[field] = field === 'b' ? parseFloat(val) : val;
+        saveData(); 
+        render();
+    }
+
+    // ==================== 修改配置 ====================
+    function updateConfig(id, f, v) { 
+        if (!isUnlocked) { 
+            alert("只有管理员才能修改配置 / Solo Admin");
+            render(); 
+            return; 
+        } 
+        const emp = employees.find(e => e.id === id); 
+        if (emp) { 
+            emp[f] = parseFloat(v); 
+            saveData(); 
+            render(); 
+        } 
+    }
+
+    // ==================== 历史记录函数 ====================
     function getHistory() {
         const history = localStorage.getItem(HISTORY_KEY);
         return history ? JSON.parse(history) : {};
@@ -464,87 +453,11 @@ function addEmployee() {
             alert("只有管理员才能保存历史 / Solo Admin");
             return;
         }
-        
-        let totalBase = 0, totalExtras = 0, totalBonos = 0, totalAll = 0;
-        const monthData = [];
-        
-        employees.forEach(emp => {
-            let eBase = 0, eExtras = 0, eBonos = 0;
-            
-            for(let d=0; d<emp.days; d++) {
-                const rec = emp.records[d] || { s:'', e:'', off:false, abs:false, b:0 };
-                
-                if (rec.abs) {
-                    eBonos += parseFloat(rec.b || 0);
-                } else if (rec.off) {
-                    eBase += parseFloat(emp.dailyRate);
-                    eBonos += parseFloat(rec.b || 0);
-                } else {
-                    eBase += parseFloat(emp.dailyRate);
-                    if (rec.s && rec.e) {
-                        const wh = calculateHours(rec.s, rec.e);
-                        const oh = Math.max(0, wh - 9);
-                        eExtras += (oh * parseFloat(emp.otRate));
-                    }
-                    eBonos += parseFloat(rec.b || 0);
-                }
-            }
-            
-            const total = eBase + eExtras + eBonos;
-            totalBase += eBase;
-            totalExtras += eExtras;
-            totalBonos += eBonos;
-            totalAll += total;
-            
-            monthData.push({
-                name: emp.name,
-                base: eBase,
-                extras: eExtras,
-                bonos: eBonos,
-                total: total
-            });
-        });
-        
-        const now = new Date();
-        const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-        const monthName = `${now.getFullYear()}年${now.getMonth()+1}月`;
-        
-        const history = getHistory();
-        history[monthKey] = {
-            month: monthName,
-            date: now.toISOString(),
-            employees: monthData,
-            summary: {
-                base: totalBase,
-                extras: totalExtras,
-                bonos: totalBonos,
-                total: totalAll
-            }
-        };
-        
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-        saveToCloud();
-        updateHistoryCards();
-        alert(`✅ 已保存 ${monthName} 的历史数据 / Historial guardado`);
+        alert("功能开发中 / En desarrollo");
     }
 
     function showHistoryModal() {
-        const modal = document.getElementById('historyModal');
-        const select = document.getElementById('historyMonthSelect');
-        
-        const history = getHistory();
-        const months = Object.keys(history).sort().reverse();
-        
-        select.innerHTML = months.map(key => {
-            const h = history[key];
-            return `<option value="${key}">${h.month}</option>`;
-        }).join('');
-        
-        if (months.length > 0) {
-            loadHistoryMonth();
-        }
-        
-        modal.style.display = 'flex';
+        alert("功能开发中 / En desarrollo");
     }
 
     function closeHistoryModal() {
@@ -552,74 +465,15 @@ function addEmployee() {
     }
 
     function loadHistoryMonth() {
-        const select = document.getElementById('historyMonthSelect');
-        const key = select.value;
-        if (!key) return;
-        
-        const history = getHistory();
-        const data = history[key];
-        if (!data) return;
-        
-        let html = `
-            <h4 style="margin-top:0; color:#b71c1c;">${data.month} 薪资汇总 / Resumen</h4>
-            <table style="width:100%; font-size:12px;">
-                <thead>
-                    <tr style="background:#f5f5f5;">
-                        <th>员工 / Nombre</th><th>基本工资 / Base</th><th>加班费 / Extras</th><th>福利 / Bonos</th><th>合计 / Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-        
-        data.employees.forEach(emp => {
-            html += `<tr>
-                <td>${emp.name}</td>
-                <td>C$ ${emp.base.toFixed(2)}</td>
-                <td>C$ ${emp.extras.toFixed(2)}</td>
-                <td>C$ ${emp.bonos.toFixed(2)}</td>
-                <td style="font-weight:bold;">C$ ${emp.total.toFixed(2)}</td>
-            </tr>`;
-        });
-        
-        html += `
-                </tbody>
-                <tfoot>
-                    <tr style="background:#fff9c4; font-weight:bold;">
-                        <td>合计 / Total</td>
-                        <td>C$ ${data.summary.base.toFixed(2)}</td>
-                        <td>C$ ${data.summary.extras.toFixed(2)}</td>
-                        <td>C$ ${data.summary.bonos.toFixed(2)}</td>
-                        <td style="color:#b71c1c;">C$ ${data.summary.total.toFixed(2)}</td>
-                    </tr>
-                </tfoot>
-            </table>
-        `;
-        
-        document.getElementById('historyContent').innerHTML = html;
+        // 功能开发中
     }
 
     function updateHistoryCards() {
-        const history = getHistory();
-        const cardsDiv = document.getElementById('historyCards');
-        
-        const months = Object.keys(history).sort().reverse().slice(0, 6);
-        
-        cardsDiv.innerHTML = months.map(key => {
-            const h = history[key];
-            return `
-                <div style="background:#f5f5f5; padding:10px; border-radius:8px; text-align:center; cursor:pointer;" onclick="showHistoryMonth('${key}')">
-                    <div style="font-weight:bold; color:#1976d2;">${h.month}</div>
-                    <div style="font-size:18px; color:#b71c1c;">C$ ${h.summary.total.toFixed(0)}</div>
-                </div>
-            `;
-        }).join('');
+        document.getElementById('historyCards').innerHTML = '<div style="color:#999; text-align:center;">暂无历史数据 / Sin historial</div>';
     }
 
     function showHistoryMonth(key) {
-        showHistoryModal();
-        const select = document.getElementById('historyMonthSelect');
-        select.value = key;
-        loadHistoryMonth();
+        // 功能开发中
     }
 
     // ==================== 计算工时 ====================
@@ -709,7 +563,7 @@ function addEmployee() {
             alert("只有管理员才能清空数据 / Solo Admin");
             return;
         }
-        if (confirm("⚠️ 确定清空所有数据？这将同时清除备份！\n¿Limpiar todos los datos?")) { 
+        if (confirm("⚠️ 确定清空所有数据？ / ¿Limpiar todos los datos?")) { 
             employees = []; 
             localStorage.removeItem(DB_NAME);
             localStorage.removeItem(BACKUP_NAME);
@@ -719,18 +573,15 @@ function addEmployee() {
     }
 
     function exportData() {
-        if (employees.length === 0) { alert("没有数据可以备份 / No hay datos"); return; }
-        const history = getHistory();
-        const exportObj = {
-            employees: employees,
-            history: history,
-            exportDate: new Date().toISOString()
-        };
-        const d = JSON.stringify(exportObj);
+        if (employees.length === 0) { 
+            alert("没有数据可以备份 / No hay datos"); 
+            return; 
+        }
+        const d = JSON.stringify(employees);
         const b = new Blob([d], {type: "application/json"});
         const a = document.createElement("a");
         a.href = URL.createObjectURL(b);
-        a.download = `Nomina_ChinaYearly_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `Nomina_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
     }
 
@@ -746,23 +597,10 @@ function addEmployee() {
         const r = new FileReader();
         r.onload = (e) => { 
             try { 
-                const temp = JSON.parse(e.target.result); 
-                if (temp.employees && Array.isArray(temp.employees)) {
-                    employees = temp.employees;
-                    if (temp.history) {
-                        localStorage.setItem(HISTORY_KEY, JSON.stringify(temp.history));
-                    }
-                    saveData(); 
-                    render(); 
-                    alert("恢复成功 / Restaurado"); 
-                } else if (Array.isArray(temp)) {
-                    employees = temp;
-                    saveData(); 
-                    render(); 
-                    alert("恢复成功 / Restaurado"); 
-                } else {
-                    throw new Error();
-                }
+                employees = JSON.parse(e.target.result); 
+                saveData(); 
+                render(); 
+                alert("恢复成功 / Restaurado"); 
             } catch(err) { 
                 alert("文件格式不正确 / Formato inválido"); 
             } 
@@ -785,5 +623,3 @@ function addEmployee() {
 </script>
 </body>
 </html>
-
-
